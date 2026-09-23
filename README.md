@@ -13,6 +13,19 @@ Un ciudadano puede **ingresar un trámite** (permisos de edificación, certifica
 
 ---
 
+## ☁️ La forma más fácil: probar sin instalar nada (GitHub Codespaces)
+
+¿No quieres (o no puedes) instalar Docker ni PostgreSQL en tu PC? **GitHub crea el entorno completo en la nube** y tú solo usas el navegador:
+
+1. Abre este repositorio en GitHub.
+2. Botón verde **Code** → pestaña **Codespaces** → **Create codespace on main**.
+3. Espera 2-3 minutos: GitHub levanta solo la base de datos, la API y el portal web (y ya deja los datos de ejemplo cargados).
+4. Cuando GitHub te pregunte por el **puerto 5173**, elige **"Open in Browser"** → ahí está el sistema funcionando.
+
+> Nota: esta opción requiere que la organización tenga GitHub Codespaces habilitado. Si no aparece la pestaña, usa la Opción A (Docker) más abajo — funciona en Windows sin instalar Python ni PostgreSQL.
+
+---
+
 ## 📁 Estructura del repositorio
 
 ```
