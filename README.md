@@ -32,7 +32,9 @@ Un ciudadano puede **ingresar un trámite** (permisos de edificación, certifica
 
 ## 🐳 Opción A — Docker Compose (recomendada, la más fácil)
 
-Solo necesitas **Docker** instalado (Docker Desktop o Docker Engine + compose).
+Funciona igual en **Windows (Docker Desktop)**, **macOS** y **Linux**: es la mejor opción si el equipo no tiene Python, Node ni PostgreSQL instalados.
+
+Solo necesitas tener **Docker** instalado (Docker Desktop o Docker Engine + compose) y ejecutar los comandos en PowerShell o tu terminal:
 
 ```bash
 # 1. Levantar BD + API + portal web
@@ -57,11 +59,13 @@ docker compose logs -f     # ver en vivo
 docker compose down        # detener (conserva los datos en el volumen)
 ```
 
+> 💡 **En Windows:** instala **Docker Desktop** desde https://www.docker.com/products/docker-desktop/ (la primera vez te pedirá habilitar WSL2 y reiniciar). Después, todos los comandos de arriba se ejecutan igual en PowerShell o cmd — no cambia nada.
+
 ---
 
-## 🐧 Opción B — Instalación nativa (Linux / macOS)
+## 🐧 Opción B — Instalación nativa (Linux / macOS / Windows)
 
-Requiere: **Python 3.11+**, **Node.js 18+** y **PostgreSQL 16** corriendo.
+Requiere: **Python 3.11+**, **Node.js 18+** y **PostgreSQL 16** corriendo. Si estás en Windows, salta a la [sub-sección PowerShell](#¿sin-docker-y-en-windows-pasos-con-powershell) al final.
 
 ### 1. Base de datos
 
@@ -100,6 +104,41 @@ npm run dev
 ```
 
 El portal queda en http://localhost:5173 y el proxy de Vite redirige `/api` → `http://localhost:8001` automáticamente.
+
+### ¿Sin Docker y en Windows? Pasos con PowerShell
+
+1. **PostgreSQL** — instálalo con el instalador oficial de https://www.postgresql.org/download/windows/ (deja el puerto 5432) y crea la base:
+
+```powershell
+psql -U postgres -c "CREATE USER dom_user WITH PASSWORD 'dom_pass_2026';"
+psql -U postgres -c "CREATE DATABASE dom_municipal OWNER dom_user;"
+```
+
+2. **Backend** (PowerShell):
+
+```powershell
+cd backend
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1     # si PowerShell bloquea: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+pip install -r requirements.txt
+
+$env:DATABASE_URL_SYNC="postgresql://dom_user:dom_pass_2026@localhost:5432/dom_municipal"
+python -m app.create_tables
+python -m app.seed
+
+$env:DATABASE_URL="postgresql+asyncpg://dom_user:dom_pass_2026@localhost:5432/dom_municipal"
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+3. **Frontend** (en otra ventana de PowerShell):
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Abre http://localhost:5173. Los pasos 1 y 2 se hacen una sola vez (base de datos y datos de ejemplo); en adelante solo tienes que arrancar la API y el frontend.
 
 ---
 
