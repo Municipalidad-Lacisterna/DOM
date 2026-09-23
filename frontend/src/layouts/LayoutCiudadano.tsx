@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 
 /**
  * Shell del Portal Ciudadano: barra superior simple + contenido.
@@ -10,7 +10,7 @@ export default function LayoutCiudadano() {
       {/* Barra superior */}
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <NavLink to="/ciudadano" className="flex items-center gap-2">
+          <NavLink to="/" className="flex items-center gap-2">
             <span className="text-xl">🏛️</span>
             <span className="font-semibold text-slate-900">DOM en Línea</span>
           </NavLink>
@@ -49,6 +49,12 @@ export default function LayoutCiudadano() {
 
       {/* Contenido */}
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+        <Link
+          to="/"
+          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-sky-700"
+        >
+          ← Volver al inicio
+        </Link>
         <Outlet />
       </main>
 

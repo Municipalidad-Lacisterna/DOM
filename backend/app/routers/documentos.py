@@ -14,7 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.config import get_db
-from app.models import Documento, Solicitud
+from app.models import Documento, Funcionario, Solicitud
+from app.routers.auth import require_funcionario
 from app.schemas.documento import DocumentoOut
 
 router = APIRouter(prefix="/api/documentos", tags=["documentos"])
@@ -106,7 +107,9 @@ async def subir_documento(
     summary="Listar documentos de una solicitud",
 )
 async def listar_documentos(
-    id_solicitud: int, db: AsyncSession = Depends(get_db)
+    id_solicitud: int,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
+    db: AsyncSession = Depends(get_db),
 ):
     stmt = (
         select(Documento)
@@ -125,7 +128,11 @@ async def listar_documentos(
     summary="Entregar el PDF inline (para <iframe>/visor sin descarga)",
     responses={200: {"content": {"application/pdf": {}}}},
 )
-async def obtener_archivo(documento_id: int, db: AsyncSession = Depends(get_db)):
+async def obtener_archivo(
+    documento_id: int,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
+    db: AsyncSession = Depends(get_db),
+):
     doc = await db.get(Documento, documento_id)
     if not doc:
         raise HTTPException(

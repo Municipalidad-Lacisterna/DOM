@@ -18,8 +18,11 @@ export default function Sidebar() {
 
   return (
     <aside className="flex w-64 shrink-0 flex-col bg-slate-900 text-slate-300">
-      {/* Logo */}
-      <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-5">
+      {/* Logo → portada del sistema */}
+      <NavLink
+        to="/"
+        className="flex items-center gap-3 border-b border-slate-800 px-5 py-5 transition-colors hover:bg-slate-800"
+      >
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-600 text-lg text-white">
           🏛️
         </div>
@@ -27,7 +30,7 @@ export default function Sidebar() {
           <p className="text-sm font-semibold text-white">DOM Municipal</p>
           <p className="text-xs text-slate-400">Intranet Funcionarios</p>
         </div>
-      </div>
+      </NavLink>
 
       {/* Navegación */}
       <nav className="flex-1 space-y-1 px-3 py-4">

@@ -8,6 +8,25 @@ const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 /** Clave del JWT en localStorage (la misma que persiste AuthContext). */
 export const KEY_TOKEN = "dom_token";
 
+/** Clave del funcionario en localStorage (persistido como JSON por AuthContext). */
+export const KEY_FUNCIONARIO = "dom_funcionario";
+
+/** Registrado por AuthContext: se llama al recibir 401 con sesión activa (token expirado). */
+let onSesionExpirada: (() => void) | null = null;
+
+export function setOnSesionExpirada(cb: (() => void) | null) {
+  onSesionExpirada = cb;
+}
+
+function limpiarSesionLocal() {
+  try {
+    localStorage.removeItem(KEY_TOKEN);
+    localStorage.removeItem(KEY_FUNCIONARIO);
+  } catch {
+    // storage bloqueado → nada que limpiar
+  }
+}
+
 function leerToken(): string | null {
   try {
     return localStorage.getItem(KEY_TOKEN);
@@ -18,6 +37,11 @@ function leerToken(): string | null {
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    // 401 con sesión activa = token expirado; el login fallido no lleva token, no se ve afectado
+    if (res.status === 401 && leerToken()) {
+      limpiarSesionLocal();
+      onSesionExpirada?.();
+    }
     const cuerpo = await res.json().catch(() => null);
     // FastAPI devuelve { detail: string | [...] }
     const detalle = Array.isArray(cuerpo?.detail)

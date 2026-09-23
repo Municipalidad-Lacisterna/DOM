@@ -1,8 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { api, KEY_TOKEN } from "../lib/api";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { api, KEY_TOKEN, KEY_FUNCIONARIO, setOnSesionExpirada } from "../lib/api";
 import type { Funcionario, LoginResponse } from "../lib/types";
-
-const KEY_FUNCIONARIO = "dom_funcionario";
 
 interface AuthContextValue {
   rol: "funcionario" | null;
@@ -61,12 +59,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setFuncionario(res.funcionario);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     guardarLocal(KEY_TOKEN, null);
     guardarLocal(KEY_FUNCIONARIO, null);
     setToken(null);
     setFuncionario(null);
-  };
+  }, []);
+
+  // Cuando una petición recibe 401 por token expirado, api.ts limpia el storage
+  // y dispara este callback → sesión caída → ProtectedRoute redirige al login.
+  useEffect(() => {
+    setOnSesionExpirada(logout);
+    return () => setOnSesionExpirada(null);
+  }, [logout]);
 
   const rol = token && funcionario ? "funcionario" : null;
 

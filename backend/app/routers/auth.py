@@ -45,9 +45,12 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 
 async def _funcionario_actual(
-    authorization: str = Header(...), db: AsyncSession = Depends(get_db)
+    authorization: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
 ) -> Funcionario:
-    if not authorization.startswith("Bearer "):
+    # Sin header o sin esquema Bearer → mismo 401 que token inválido,
+    # así los endpoints internos nunca revelan si el problema es el header.
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido o expirado",
@@ -73,3 +76,8 @@ async def _funcionario_actual(
 @router.get("/me", response_model=FuncionarioOut)
 async def me(funcionario: Funcionario = Depends(_funcionario_actual)):
     return FuncionarioOut.model_validate(funcionario)
+
+
+# Dependencia pública para proteger endpoints internos de otros routers
+# (bandeja, cambios de estado, documentos, etc.): exige funcionario con JWT.
+require_funcionario = _funcionario_actual

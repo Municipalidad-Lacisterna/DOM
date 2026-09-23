@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api";
 import EstadoBadge from "../../components/EstadoBadge";
 import type { BandejaItem } from "../../lib/types";
@@ -10,6 +10,14 @@ export default function ConsultarEstado() {
   const [datos, setDatos] = useState<BandejaItem | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Vuelve a la pantalla anterior; si no hay historial, cae a la Home.
+  // No puede rebotar: /estado no redirige a sí mismo.
+  const volver = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/");
+  };
 
   const consultar = async (e: FormEvent) => {
     e.preventDefault();
@@ -44,6 +52,13 @@ export default function ConsultarEstado() {
   return (
     <div className="min-h-screen bg-slate-50 py-10">
       <div className="mx-auto max-w-xl px-4">
+        <button
+          type="button"
+          onClick={volver}
+          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-sky-700"
+        >
+          ← Volver
+        </button>
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-slate-900">
             Consultar estado de mi trámite

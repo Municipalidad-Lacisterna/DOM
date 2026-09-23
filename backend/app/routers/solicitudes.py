@@ -19,6 +19,7 @@ from app.models import (
     Solicitante,
     TipoTramite,
 )
+from app.routers.auth import require_funcionario
 from app.schemas.solicitud import (
     EstadoUpdate,
     SolicitudBandejaOut,
@@ -147,6 +148,7 @@ async def crear_solicitud(data: SolicitudIngreso, db: AsyncSession = Depends(get
 async def cambiar_estado(
     solicitud_id: int,
     payload: EstadoUpdate,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -199,11 +201,13 @@ async def cambiar_estado(
     solicitud.estado_actual = payload.estado_nuevo
 
     # ── Registrar en log (CRÍTICO) ──────────────────────────────────
+    # Si el payload no trae id_funcionario, usamos el autenticado: así el
+    # log queda firmado por quien hizo el cambio, nunca en vacío.
     log = LogEstadoTramite(
         id_solicitud=solicitud.id,
         estado_anterior=estado_anterior,
         estado_nuevo=payload.estado_nuevo,
-        id_funcionario=payload.id_funcionario,
+        id_funcionario=payload.id_funcionario or funcionario_auth.id,
         observaciones=payload.observaciones,
     )
     db.add(log)
@@ -229,6 +233,7 @@ async def bandeja(
     estado: str | None = Query(None, description="Estado actual del trámite"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    funcionario_auth: Funcionario = Depends(require_funcionario),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -331,7 +336,9 @@ async def consultar_estado_por_folio(
     summary="Detalle de una solicitud (con relaciónes)",
 )
 async def obtener_solicitud(
-    solicitud_id: int, db: AsyncSession = Depends(get_db)
+    solicitud_id: int,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
+    db: AsyncSession = Depends(get_db),
 ):
     """Devuelve una solicitud con datos de trámite, solicitante y predio."""
     stmt = (
@@ -377,6 +384,7 @@ async def obtener_solicitud(
 async def editar_solicitud(
     solicitud_id: int,
     payload: SolicitudUpdate,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
     db: AsyncSession = Depends(get_db),
 ):
     """

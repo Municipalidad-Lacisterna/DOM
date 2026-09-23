@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 /** Login real de funcionarios (RUT + contraseña → JWT). */
@@ -33,6 +33,12 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 to-sky-50 px-4">
       <div className="w-full max-w-md">
+        <Link
+          to="/"
+          className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-sky-700"
+        >
+          ← Volver al inicio
+        </Link>
         <div className="mb-8 text-center">
           <div className="mb-3 text-4xl">🏛️</div>
           <h1 className="text-2xl font-bold text-slate-900">Acceso funcionarios</h1>
