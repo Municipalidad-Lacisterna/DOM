@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Entorno
+.env
+.env.*
+
+# Archivos subidos en runtime (se crea al arrancar la API)
+storage/
+
+# Herramientas y editor
+.omo/
+.idea/
+.vscode/
+.DS_Store
+
+# Pruebas locales
+test-upload.pdf

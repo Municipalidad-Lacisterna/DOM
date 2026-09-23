@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Tipografía base del sistema */
+html {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
