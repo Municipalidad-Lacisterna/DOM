@@ -38,7 +38,7 @@ export default function ConsultarEstado() {
     }
   };
 
-  const fecha = datos
+  const fecha = datos && datos.fecha_creacion
     ? new Date(datos.fecha_creacion).toLocaleDateString("es-CL", {
         day: "numeric",
         month: "long",

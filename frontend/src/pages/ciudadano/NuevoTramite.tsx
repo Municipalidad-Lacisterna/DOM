@@ -34,7 +34,7 @@ const INICIAL: Formulario = {
 
 export default function NuevoTramite() {
   const [form, setForm] = useState<Formulario>(INICIAL);
-  const [archivo, setArchivo] = useState<File | null>(null);
+  const [archivos, setArchivos] = useState<File[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<SolicitudOut | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,14 +72,18 @@ export default function NuevoTramite() {
     setForm((f) => ({ ...f, [campo]: e.target.value }));
 
   const manejarArchivo = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (file && !file.name.toLowerCase().endsWith(".pdf")) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.some(f => !f.name.toLowerCase().endsWith(".pdf"))) {
       setError("Solo se permiten archivos PDF.");
       e.target.value = "";
       return;
     }
-    setArchivo(file);
+    setArchivos((prev) => [...prev, ...files]);
     setError(null);
+  };
+
+  const eliminarArchivo = (index: number) => {
+    setArchivos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const enviar = async (e: FormEvent) => {
@@ -104,20 +108,23 @@ export default function NuevoTramite() {
       setResultado(res);
       setForm(INICIAL);
 
-      if (archivo) {
-        const formData = new FormData();
-        formData.append("id_solicitud", String(res.id));
-        formData.append("tipo_documento", "Adjunto ciudadano");
-        formData.append("archivo", archivo);
-        try {
-          await api.postForm<Documento>("/documentos/upload", formData);
-          setDocEstado("ok");
-        } catch {
-          setDocEstado("err");
+      if (archivos.length > 0) {
+        let errores = 0;
+        for (const file of archivos) {
+          const formData = new FormData();
+          formData.append("id_solicitud", String(res.id));
+          formData.append("tipo_documento", "Adjunto ciudadano");
+          formData.append("archivo", file);
+          try {
+            await api.postForm<Documento>("/documentos/upload", formData);
+          } catch {
+            errores++;
+          }
         }
+        setDocEstado(errores === 0 ? "ok" : "err");
       }
 
-      setArchivo(null);
+      setArchivos([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado");
     } finally {
@@ -147,7 +154,7 @@ export default function NuevoTramite() {
             Puede hacer seguimiento con este folio.
           </p>
           {docEstado === "ok" && (
-            <p className="mt-1">📎 PDF adjunto subido correctamente.</p>
+            <p className="mt-1">📎 PDFs adjuntos subidos correctamente.</p>
           )}
           <Link
             to={`/estado?folio=${resultado.numero_ingreso}`}
@@ -162,8 +169,8 @@ export default function NuevoTramite() {
       {resultado && docEstado === "err" && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           ⚠️ El trámite se creó (folio{" "}
-          <span className="font-mono font-bold">{resultado.numero_ingreso}</span>), pero el PDF no
-          se pudo subir. Intente adjuntarlo nuevamente o acuda a la DOM.
+          <span className="font-mono font-bold">{resultado.numero_ingreso}</span>), pero algunos o todos los PDFs no
+          se pudieron subir. Acuda a la DOM o contacte soporte.
         </div>
       )}
 
@@ -288,25 +295,43 @@ export default function NuevoTramite() {
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
                 Documentos adjuntos (PDF)
               </label>
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600 transition-colors hover:border-sky-400 hover:bg-sky-50">
-                <span className="flex items-center gap-2">
-                  📎 {archivo ? archivo.name : "Haga clic para adjuntar un PDF"}
-                </span>
-                {archivo && (
-                  <span className="text-xs text-slate-400">
-                    {(archivo.size / 1024).toFixed(0)} KB
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600 transition-colors hover:border-sky-400 hover:bg-sky-50">
+                  <span className="flex items-center gap-2 font-medium">
+                    📎 Haga clic para adjuntar PDFs
                   </span>
+                  <input
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    multiple
+                    onChange={manejarArchivo}
+                    className="hidden"
+                  />
+                </label>
+                
+                {archivos.length > 0 && (
+                  <ul className="space-y-2">
+                    {archivos.map((file, i) => (
+                      <li key={i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                        <span className="truncate max-w-[200px]" title={file.name}>📄 {file.name}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-400">{(file.size / 1024).toFixed(0)} KB</span>
+                          <button
+                            type="button"
+                            onClick={() => eliminarArchivo(i)}
+                            className="text-red-500 hover:text-red-700 font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-                <input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={manejarArchivo}
-                  className="hidden"
-                />
-              </label>
+              </div>
               <p className="mt-1.5 text-xs text-slate-400">
-                El PDF se sube al servidor al ingresar el trámite y queda disponible para la
-                revisión de la DOM.
+                Los PDFs se suben al servidor al ingresar el trámite y quedan disponibles para la
+                revisión de la DOM. Puedes seleccionar varios.
               </p>
             </div>
           </div>
