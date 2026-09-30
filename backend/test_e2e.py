@@ -8,6 +8,31 @@ import httpx
 import time
 
 BASE = "http://api:8000"
+
+def crear_pdf_valido_minimo(texto):
+    stream = f"BT /F1 24 Tf 72 720 Td ({texto}) Tj ET".encode("utf-8")
+    objetos = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"endstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    partes = [b"%PDF-1.4\n"]
+    offsets = [0]
+    for indice, objeto in enumerate(objetos, start=1):
+        offsets.append(sum(len(parte) for parte in partes))
+        partes.append(f"{indice} 0 obj\n".encode("ascii") + objeto + b"\nendobj\n")
+    inicio_xref = sum(len(parte) for parte in partes)
+    xref = [b"xref\n0 6\n", b"0000000000 65535 f \n"]
+    xref.extend(f"{offset:010d} 00000 n \n".encode("ascii") for offset in offsets[1:])
+    partes.extend(xref)
+    partes.append(b"trailer\n<< /Size 6 /Root 1 0 R >>\n")
+    partes.append(f"startxref\n{inicio_xref}\n%%EOF\n".encode("ascii"))
+    return b"".join(partes)
+
+
+PDF_VALIDO_MINIMO = crear_pdf_valido_minimo("Prueba upload DOM")
 PASS = 0
 FAIL = 0
 
@@ -187,7 +212,7 @@ else:
 
 
 # ── 15. Subir PDF (upload público, flujo ciudadano) ───────────────
-pdf_content = b"%PDF-1.4 fake content for testing purposes"
+pdf_content = PDF_VALIDO_MINIMO
 files = {"archivo": ("test.pdf", pdf_content, "application/pdf")}
 data = {"id_solicitud": solicitud_id, "tipo_documento": "Solicitud firmada"}
 r = httpx.post(f"{BASE}/api/documentos/upload", data=data, files=files)
@@ -217,13 +242,14 @@ if r.status_code == 200:
     cd = r.headers.get("content-disposition", "")
     assert "application/pdf" in ct, f"content-type inesperado: {ct}"
     assert "inline" in cd, f"content-disposition no es inline: {cd}"
+    assert b"%%EOF" in r.content, "PDF incompleto: falta EOF"
     ok(f"GET /documentos/{documento_id}/archivo → inline PDF ✓")
 else:
     fail("GET /documentos/{id}/archivo", f"status={r.status_code}")
 
 
 # ── 18. Subir segundo documento ───────────────────────────────────
-pdf2 = b"%PDF-1.4 second doc"
+pdf2 = PDF_VALIDO_MINIMO
 files2 = {"archivo": ("plano.pdf", pdf2, "application/pdf")}
 data2 = {"id_solicitud": solicitud_id, "tipo_documento": "Plano de emplazamiento"}
 r = httpx.post(f"{BASE}/api/documentos/upload", data=data2, files=files2)
