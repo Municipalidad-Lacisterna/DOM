@@ -92,16 +92,20 @@ export default function RevisarTramite() {
       .catch(() => setTipos([]));
   }, [editando]);
 
-  // ── Cambiar estado (PUT /solicitudes/{id}/estado) ────────────────
-  const cambiarEstado = async (estadoNuevo: string, observacionesEnvio?: string) => {
+  const ejecutarAccionFlujo = async (
+    accion: "iniciar" | "avanzar" | "observar" | "reingresar",
+    observacionesEnvio?: string,
+  ) => {
     setEnviando(true);
     setAviso(null);
     try {
-      const res = await api.put<SolicitudOut>(`/solicitudes/${solicitudId}/estado`, {
-        estado_nuevo: estadoNuevo,
+      const res = await api.put<SolicitudOut>(`/solicitudes/${solicitudId}/flujo`, {
+        accion,
         observaciones: observacionesEnvio ?? null,
       });
-      setSolicitud((s) => (s ? { ...s, estado_actual: res.estado_actual } : s));
+      setSolicitud((s) =>
+        s ? { ...s, estado_actual: res.estado_actual, fase_actual: res.fase_actual } : s,
+      );
       setMostrarObs(false);
       setObservaciones("");
       setAviso({ tipo: "ok", texto: `Trámite actualizado a "${res.estado_actual}".` });
@@ -175,22 +179,10 @@ export default function RevisarTramite() {
 
   const enRevision = solicitud.estado_actual === "En Revisión";
   const ingresado = solicitud.estado_actual === "Ingresado";
+  const enCorreccion = solicitud.estado_actual === "En Corrección";
 
-  // Mapear estado actual → índice de fase activa (0 = primera fase)
-  const indiceFaseActiva = (() => {
-    if (fases.length === 0) return -1;
-    switch (solicitud.estado_actual) {
-      case "Aprobado":
-      case "Finalizado":
-        return fases.length - 1;
-      case "En Revisión":
-        return Math.min(1, fases.length - 1);
-      case "En Corrección":
-        return 0;
-      default:
-        return 0;
-    }
-  })();
+  const indiceFaseActiva =
+    fases.length === 0 ? -1 : Math.min(Math.max(solicitud.fase_actual - 1, 0), fases.length - 1);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -268,7 +260,7 @@ export default function RevisarTramite() {
 
             {ingresado && (
               <button
-                onClick={() => cambiarEstado("En Revisión")}
+                onClick={() => ejecutarAccionFlujo("iniciar")}
                 disabled={enviando}
                 className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
@@ -279,11 +271,13 @@ export default function RevisarTramite() {
             {enRevision && (
               <div className="space-y-2.5">
                 <button
-                  onClick={() => cambiarEstado("Aprobado")}
-                  disabled={enviando}
+                  onClick={() => ejecutarAccionFlujo("avanzar")}
+                  disabled={enviando || fases.length === 0}
                   className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
-                  ✅ Aprobar trámite
+                  {solicitud.fase_actual >= fases.length
+                    ? "Completar trámite"
+                    : "Completar fase y avanzar"}
                 </button>
                 <button
                   onClick={() => setMostrarObs(true)}
@@ -293,6 +287,16 @@ export default function RevisarTramite() {
                   📝 Emitir observaciones
                 </button>
               </div>
+            )}
+
+            {enCorreccion && (
+              <button
+                onClick={() => ejecutarAccionFlujo("reingresar")}
+                disabled={enviando}
+                className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                Reingresar antecedentes subsanados
+              </button>
             )}
 
             {/* Panel de observaciones (Emitir observaciones) */}
@@ -310,7 +314,7 @@ export default function RevisarTramite() {
                 </label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => cambiarEstado("En Corrección", observaciones)}
+                    onClick={() => ejecutarAccionFlujo("observar", observaciones)}
                     disabled={enviando || !observaciones.trim()}
                     className="flex-1 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300"
                   >

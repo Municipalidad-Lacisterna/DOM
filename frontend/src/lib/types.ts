@@ -21,6 +21,7 @@ export interface SolicitudOut {
   id: number;
   numero_ingreso: string;
   estado_actual: string;
+  fase_actual: number;
   id_solicitante: number;
   id_predio: number;
   id_tipo: number;
@@ -31,6 +32,7 @@ export interface BandejaItem {
   id: number;
   numero_ingreso: string;
   estado_actual: string;
+  fase_actual: number;
   fecha_creacion: string | null;
   id_tipo: number;
   tipo_tramite: string;
