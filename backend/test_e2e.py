@@ -200,15 +200,37 @@ else:
     fail("GET /solicitudes/{id} (persistencia edición)", f"status={r.status_code}")
 
 
-# ── 14. Cambiar estado → En Revisión (log firmado por el auth) ────
-r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/estado", headers=AUTH, json={
-    "estado_nuevo": "En Revisión"
+# ── 14. Iniciar flujo secuencial (log firmado por el auth) ─────────
+r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/flujo", headers=AUTH, json={
+    "accion": "iniciar"
 })
 if r.status_code == 200:
     assert r.json()["estado_actual"] == "En Revisión"
-    ok("PUT /estado → Ingresado → En Revisión")
+    assert r.json()["fase_actual"] == 1
+    ok("PUT /flujo iniciar → En Revisión, fase 1")
 else:
-    fail("PUT /estado (En Revisión)", f"status={r.status_code}, body={r.text[:200]}")
+    fail("PUT /flujo (iniciar)", f"status={r.status_code}, body={r.text[:200]}")
+
+r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/flujo", headers=AUTH, json={
+    "accion": "observar",
+    "observaciones": "Falta antecedente de prueba"
+})
+if r.status_code == 200:
+    assert r.json()["estado_actual"] == "En Corrección"
+    assert r.json()["fase_actual"] == 1
+    ok("PUT /flujo observar → conserva la fase pendiente")
+else:
+    fail("PUT /flujo (observar)", f"status={r.status_code}, body={r.text[:200]}")
+
+r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/flujo", headers=AUTH, json={
+    "accion": "reingresar"
+})
+if r.status_code == 200:
+    assert r.json()["estado_actual"] == "En Revisión"
+    assert r.json()["fase_actual"] == 1
+    ok("PUT /flujo reingresar → vuelve a revisión en la misma fase")
+else:
+    fail("PUT /flujo (reingresar)", f"status={r.status_code}, body={r.text[:200]}")
 
 
 # ── 15. Subir PDF (upload público, flujo ciudadano) ───────────────
@@ -269,15 +291,26 @@ else:
     fail(" listar documentos post-2do", f"status={r.status_code}")
 
 
-# ── 20. Aprobar el trámite ────────────────────────────────────────
-r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/estado", headers=AUTH, json={
-    "estado_nuevo": "Aprobado"
-})
-if r.status_code == 200:
-    assert r.json()["estado_actual"] == "Aprobado"
-    ok("PUT /estado → En Revisión → Aprobado")
+# ── 20. Completar todas las fases sin saltos ───────────────────────
+r = httpx.get(f"{BASE}/api/tipos-tramite/{tipo_primero['id']}/fases")
+fases_tipo = r.json() if r.status_code == 200 else []
+if fases_tipo:
+    for avance in range(len(fases_tipo)):
+        r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/flujo", headers=AUTH, json={
+            "accion": "avanzar"
+        })
+        if r.status_code != 200:
+            fail("PUT /flujo (avanzar)", f"avance={avance + 1}, status={r.status_code}, body={r.text[:200]}")
+            break
+        flujo = r.json()
+        fase_esperada = min(avance + 2, len(fases_tipo))
+        assert flujo["fase_actual"] == fase_esperada
+        estado_esperado = "Finalizado" if avance == len(fases_tipo) - 1 else "En Revisión"
+        assert flujo["estado_actual"] == estado_esperado
+    else:
+        ok(f"PUT /flujo avanzar → {len(fases_tipo)} fases completadas sin saltos")
 else:
-    fail("PUT /estado (Aprobado)", f"status={r.status_code}, body={r.text[:200]}")
+    fail("GET fases para E2E", f"status={r.status_code}, body={r.text[:200]}")
 
 
 # ── 21. Intento inválido: cambiar a estado inexistente ────────────
@@ -290,22 +323,23 @@ else:
     fail("PUT /estado (inválido)", f"esperaba 400/msg válido, obtuve {r.status_code}: {r.text[:120]}")
 
 
-# ── 22. Intento inválido: repetir mismo estado ────────────────────
-r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/estado", headers=AUTH, json={
-    "estado_nuevo": "Aprobado"
+# ── 22. Intento inválido: avanzar después de finalizar ─────────────
+r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/flujo", headers=AUTH, json={
+    "accion": "avanzar"
 })
-if r.status_code == 400 and "ya está en ese estado" in r.text:
-    ok("PUT /estado → 400 para cambio al mismo estado")
+if r.status_code == 400 and "no está permitida" in r.text:
+    ok("PUT /flujo → 400 al intentar avanzar un trámite finalizado")
 else:
-    fail("PUT /estado (mismo)", f"esperaba 400/msg correcto, obtuve {r.status_code}: {r.text[:120]}")
+    fail("PUT /flujo (finalizado)", f"esperaba 400/msg correcto, obtuve {r.status_code}: {r.text[:120]}")
 
 
 # ── 23. Verificar estado final ────────────────────────────────────
 r = httpx.get(f"{BASE}/api/solicitudes/{solicitud_id}", headers=AUTH)
 if r.status_code == 200:
     final = r.json()
-    assert final["estado_actual"] == "Aprobado"
-    ok(f"GET /solicitudes/{solicitud_id} → estado final = Aprobado ✓")
+    assert final["estado_actual"] == "Finalizado"
+    assert final["fase_actual"] == len(fases_tipo)
+    ok(f"GET /solicitudes/{solicitud_id} → flujo finalizado en fase {len(fases_tipo)} ✓")
 else:
     fail("GET /solicitudes/{id} (final)", f"status={r.status_code}")
 
@@ -337,14 +371,14 @@ else:
     fail("POST /documentos/upload (no-PDF)", f"esperaba 400, obtuve {r.status_code}")
 
 
-# ── 27. BLINDAJE: cambiar estado sin token ────────────────────────
-r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/estado", json={
-    "estado_nuevo": "Rechazado"
+# ── 27. BLINDAJE: avanzar flujo sin token ─────────────────────────
+r = httpx.put(f"{BASE}/api/solicitudes/{solicitud_id}/flujo", json={
+    "accion": "avanzar"
 })
 if r.status_code == 401:
-    ok("PUT /estado sin token → 401 (no puede tocar estados sin sesión)")
+    ok("PUT /flujo sin token → 401 (no puede avanzar sin sesión)")
 else:
-    fail("PUT /estado sin token", f"esperaba 401, obtuve {r.status_code}")
+    fail("PUT /flujo sin token", f"esperaba 401, obtuve {r.status_code}")
 
 
 # ── 28. BLINDAJE: documentos sin token ────────────────────────────

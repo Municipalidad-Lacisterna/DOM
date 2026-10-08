@@ -38,9 +38,13 @@ jobs:
     - name: Instalar dependencias para el script de prueba
       run: |
         python -m pip install --upgrade pip
-        pip install httpx
+        pip install -r backend/requirements.txt httpx pytest
 
-    - name: Ejecutar Suite E2E (28 pasos)
+    - name: Ejecutar pruebas unitarias del flujo
+      working-directory: backend
+      run: pytest -q tests
+
+    - name: Ejecutar Suite E2E
       run: |
         # El script por defecto busca http://api:8000 (red docker interna)
         # Como lo corremos desde el runner de GitHub (host), apuntamos al puerto expuesto
