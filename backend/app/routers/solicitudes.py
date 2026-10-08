@@ -8,25 +8,27 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.database.config import get_db
 from app.models import (
+    FaseTramite,
     Funcionario,
     LogEstadoTramite,
     Predio,
-    Solicitud,
     Solicitante,
+    Solicitud,
     TipoTramite,
 )
 from app.routers.auth import require_funcionario
 from app.schemas.solicitud import (
     EstadoUpdate,
+    FlujoUpdate,
     SolicitudBandejaOut,
     SolicitudIngreso,
     SolicitudOut,
     SolicitudUpdate,
 )
+from app.services.flujo import EstadoTramite, TransicionFlujoError, resolver_transicion
 
 router = APIRouter(prefix="/api/solicitudes", tags=["solicitudes"])
 
@@ -38,6 +40,15 @@ ESTADOS_VALIDOS: set[str] = {
     "Aprobado",
     "Rechazado",
     "Finalizado",
+}
+
+TRANSICIONES_ESTADO_PERMITIDAS: dict[str, set[str]] = {
+    "Ingresado": {"En Revisión", "Rechazado"},
+    "En Revisión": {"En Corrección", "Rechazado"},
+    "En Corrección": {"En Revisión", "Rechazado"},
+    "Aprobado": {"Finalizado"},
+    "Rechazado": set(),
+    "Finalizado": set(),
 }
 
 
@@ -187,6 +198,15 @@ async def cambiar_estado(
             detail="El trámite ya está en ese estado",
         )
 
+    if payload.estado_nuevo not in TRANSICIONES_ESTADO_PERMITIDAS[solicitud.estado_actual]:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"No se permite pasar de '{solicitud.estado_actual}' a "
+                f"'{payload.estado_nuevo}'. Use el avance secuencial del flujo."
+            ),
+        )
+
     # ── Verificar funcionario (si viene) ────────────────────────────
     if payload.id_funcionario is not None:
         funcionario = await db.get(Funcionario, payload.id_funcionario)
@@ -215,6 +235,68 @@ async def cambiar_estado(
     await db.commit()
     await db.refresh(solicitud)
 
+    return solicitud
+
+
+@router.put(
+    "/{solicitud_id}/flujo",
+    response_model=SolicitudOut,
+    summary="Ejecutar una acción en el flujo secuencial del trámite",
+)
+async def ejecutar_accion_flujo(
+    solicitud_id: int,
+    payload: FlujoUpdate,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
+    db: AsyncSession = Depends(get_db),
+):
+    solicitud = await db.get(Solicitud, solicitud_id)
+    if solicitud is None:
+        raise HTTPException(status_code=404, detail=f"Solicitud {solicitud_id} no encontrada")
+
+    total_fases = (
+        await db.execute(
+            select(func.count(FaseTramite.id)).where(FaseTramite.id_tipo == solicitud.id_tipo)
+        )
+    ).scalar_one()
+
+    try:
+        estado_actual = EstadoTramite(solicitud.estado_actual)
+        resultado = resolver_transicion(
+            estado_actual,
+            fase_actual=solicitud.fase_actual,
+            total_fases=total_fases,
+            accion=payload.accion,
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El estado '{solicitud.estado_actual}' no admite acciones de flujo",
+        ) from None
+    except TransicionFlujoError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    fase_anterior = solicitud.fase_actual
+    estado_anterior = solicitud.estado_actual
+    solicitud.fase_actual = resultado.fase_actual
+    solicitud.estado_actual = resultado.estado.value
+
+    detalle = (
+        f"Acción de flujo: {payload.accion.value}. "
+        f"Fase {fase_anterior}→{resultado.fase_actual}. "
+        f"{payload.observaciones or ''}"
+    ).strip()[:500]
+    db.add(
+        LogEstadoTramite(
+            id_solicitud=solicitud.id,
+            estado_anterior=estado_anterior,
+            estado_nuevo=solicitud.estado_actual,
+            id_funcionario=funcionario_auth.id,
+            observaciones=detalle,
+        )
+    )
+
+    await db.commit()
+    await db.refresh(solicitud)
     return solicitud
 
 
@@ -264,6 +346,7 @@ async def bandeja(
             id=sol.id,
             numero_ingreso=sol.numero_ingreso,
             estado_actual=sol.estado_actual,
+            fase_actual=sol.fase_actual,
             fecha_creacion=sol.fecha_creacion,
             id_tipo=tipo.id,
             tipo_tramite=tipo.nombre,
@@ -315,6 +398,7 @@ async def consultar_estado_por_folio(
         id=sol.id,
         numero_ingreso=sol.numero_ingreso,
         estado_actual=sol.estado_actual,
+        fase_actual=sol.fase_actual,
         fecha_creacion=sol.fecha_creacion,
         id_tipo=tipo.id,
         tipo_tramite=tipo.nombre,
@@ -361,6 +445,7 @@ async def obtener_solicitud(
         id=sol.id,
         numero_ingreso=sol.numero_ingreso,
         estado_actual=sol.estado_actual,
+        fase_actual=sol.fase_actual,
         fecha_creacion=sol.fecha_creacion,
         id_tipo=tipo.id,
         tipo_tramite=tipo.nombre,
@@ -445,6 +530,8 @@ async def editar_solicitud(
                 detail=f"Tipo de trámite {payload.id_tipo} no encontrado",
             )
         solicitud.id_tipo = payload.id_tipo
+        solicitud.fase_actual = 1
+        solicitud.estado_actual = "Ingresado"
 
     await db.commit()
 
@@ -462,6 +549,7 @@ async def editar_solicitud(
         id=sol.id,
         numero_ingreso=sol.numero_ingreso,
         estado_actual=sol.estado_actual,
+        fase_actual=sol.fase_actual,
         fecha_creacion=sol.fecha_creacion,
         id_tipo=tipo.id,
         tipo_tramite=tipo.nombre,

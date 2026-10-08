@@ -20,6 +20,7 @@ class Solicitud(Base):
         Integer, ForeignKey("tipos_tramite.id", ondelete="RESTRICT"), nullable=False
     )
     estado_actual = Column(String(50), nullable=False, default="ingresado")
+    fase_actual = Column(Integer, nullable=False, default=1, server_default="1")
 
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_actualizacion = Column(

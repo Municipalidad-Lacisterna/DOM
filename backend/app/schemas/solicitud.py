@@ -1,7 +1,11 @@
 """Schemas Pydantic — Solicitante / Predio / Solicitudes"""
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from typing import Self
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+
+from app.services.flujo import AccionFlujo
 
 
 # ── Entrada: ingreso de trámite ─────────────────────────────────────
@@ -44,6 +48,22 @@ class EstadoUpdate(BaseModel):
     observaciones: str | None = Field(None, max_length=500)
 
 
+class FlujoUpdate(BaseModel):
+    accion: AccionFlujo
+    observaciones: str | None = Field(None, max_length=500)
+
+    @model_validator(mode="after")
+    def exigir_observaciones(self) -> Self:
+        if (
+            self.accion is AccionFlujo.OBSERVAR
+            and not (self.observaciones or "").strip()
+        ):
+            raise ValueError(
+                "Las observaciones son obligatorias al devolver un trámite"
+            )
+        return self
+
+
 # ── Entrada: edición de un trámite (intranet) ───────────────────────
 class SolicitudUpdate(BaseModel):
     """Payload de PUT /api/solicitudes/{id} — corrección por funcionario.
@@ -64,6 +84,7 @@ class SolicitudOut(BaseModel):
     id: int
     numero_ingreso: str
     estado_actual: str
+    fase_actual: int = Field(ge=1)
     id_solicitante: int
     id_predio: int
     id_tipo: int
@@ -75,6 +96,7 @@ class SolicitudBandejaOut(BaseModel):
     id: int
     numero_ingreso: str
     estado_actual: str
+    fase_actual: int = Field(ge=1)
     fecha_creacion: datetime | None = None
 
     id_tipo: int = Field(gt=0, description="Id del tipo de trámite")
