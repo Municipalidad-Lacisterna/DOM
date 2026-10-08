@@ -56,7 +56,7 @@ docker compose up --build -d
 # 2. Primera vez: crear las tablas
 docker compose exec api python -m app.create_tables
 
-# 3. Primera vez: sembrar catálogo (13 tipos de trámite, 7 funcionarios, 92 fases)
+# 3. Primera vez: sembrar catálogo (16 tipos de trámite, 7 funcionarios, 118 fases)
 docker compose exec api python -m app.seed
 ```
 
@@ -182,7 +182,39 @@ Todos los funcionarios comparten la contraseña `dom2026`:
 
 2. **Seguimiento ciudadano** (http://localhost:5173 → "Consultar estado"): ingresa el folio y verás el estado del trámite sin necesidad de cuenta.
 
-3. **Intranet de funcionarios** (http://localhost:5173 → "Intranet Funcionarios"): inicia sesión con `11111111-1` / `dom2026`, abre el trámite desde la bandeja, edítalo si quieres y cambia su estado (Ingresado → En Revisión → Aprobado, etc.). El ciudadano verá el nuevo estado al consultar su folio.
+3. **Intranet de funcionarios** (http://localhost:5173 → "Intranet Funcionarios"): inicia sesión con `11111111-1` / `dom2026`, abre el trámite desde la bandeja y pulsa **Tomar en revisión**. Completa cada fase en orden. El ciudadano verá el estado actualizado al consultar su folio.
+
+### Cómo funciona el flujo por fases
+
+Cada tipo de trámite tiene una secuencia propia basada en los procedimientos de la DOM de La Cisterna. El catálogo contiene **16 tipos y 118 fases** repartidas entre DOTECAP, Edificación, Urbanismo e Inspección, Ejecución y la Oficina de Impuesto Territorial.
+
+La solicitud guarda dos datos relacionados:
+
+- `estado_actual`: situación general del expediente, por ejemplo `Ingresado`, `En Revisión`, `En Corrección` o `Finalizado`.
+- `fase_actual`: posición exacta dentro del procedimiento correspondiente al tipo de trámite.
+
+El funcionario opera el flujo mediante `PUT /api/solicitudes/{id}/flujo`:
+
+| Acción | Estado requerido | Resultado |
+|---|---|---|
+| `iniciar` | `Ingresado` | Comienza la revisión en la primera fase. |
+| `avanzar` | `En Revisión` | Completa una sola fase. En la última, finaliza el trámite. |
+| `observar` | `En Revisión` | Envía el expediente a corrección sin perder la fase pendiente. Requiere observaciones. |
+| `reingresar` | `En Corrección` | Retorna a revisión en la misma fase. |
+
+Cada acción registra funcionario, estado anterior, estado nuevo, fase y observaciones en el historial. El endpoint antiguo de estados permanece para compatibilidad, pero rechaza saltos como `Ingresado → Aprobado`.
+
+#### Actualizar una base de datos existente
+
+Para una instalación creada antes de incorporar `fase_actual`, ejecuta la migración y vuelve a sembrar el catálogo:
+
+```bash
+docker compose exec -T db psql -U dom_user -d dom_municipal \
+  < backend/migrations/20261008_flujo_fases.sql
+docker compose exec api python -m app.seed
+```
+
+La migración es idempotente. Conserva las solicitudes existentes y ubica los trámites ya finalizados en su última fase.
 
 ---
 
