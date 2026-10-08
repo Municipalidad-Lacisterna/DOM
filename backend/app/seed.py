@@ -36,6 +36,9 @@ TIPOS_TRAMITE = [
     # ── Ejecución (p.4: ciclo de vida de proyectos + alumbrado) ─────
     ("Obra Municipal (SECPLAN)", "Ejecución"),
     ("Reparación de Alumbrado Público", "Ejecución"),
+    ("Obra Eléctrica Municipal", "Ejecución"),
+    ("Licitación Eléctrica Municipal", "Ejecución"),
+    ("Denuncia SUBTEL (SOS Emergencia)", "Ejecución"),
 
     # ── Oficina Impuesto Territorial (p.5: Ley 17.235 / SII) ────────
     ("Solicitud Impuesto Territorial (Ley 17.235)", "Oficina Impuesto Territorial"),
@@ -102,19 +105,21 @@ FASES_POR_TIPO = {
         (1, "Revisión de antecedentes técnicos", "Edificación", "Se revisan los antecedentes técnicos del proyecto."),
         (2, "Detección de errores", "Edificación", "Se verifica la existencia de errores en la documentación (si los hay, se emite acta de observaciones)."),
         (3, "Acta de observaciones", "Edificación", "Se notifican las observaciones al solicitante — 60 días corridos para subsanar."),
-        (4, "Cálculo de derechos", "Edificación", "Se calcula el valor de los derechos municipales."),
-        (5, "Pago de derechos", "Ciudadano", "El ciudadano paga los derechos correspondientes."),
-        (6, "Otorgamiento del permiso", "Edificación", "Se otorga el permiso de edificación."),
-        (7, "Vigencia del permiso", "Dirección de Obras", "El permiso queda vigente por 3 años."),
+        (4, "Plazo de subsanación", "Ciudadano", "El arquitecto dispone de 60 días corridos para subsanar las observaciones."),
+        (5, "Cálculo de derechos", "Edificación", "Se calcula el valor de los derechos municipales."),
+        (6, "Pago de derechos", "Ciudadano", "El ciudadano paga los derechos correspondientes."),
+        (7, "Otorgamiento del permiso", "Edificación", "Se otorga el permiso de edificación."),
+        (8, "Vigencia del permiso", "Dirección de Obras", "El permiso queda vigente por 3 años."),
     ],
     "Modificación de Permiso de Edificación": [
         (1, "Revisión de antecedentes técnicos", "Edificación", "Se revisan los antecedentes técnicos de la modificación."),
         (2, "Detección de errores", "Edificación", "Se verifica la existencia de errores en la documentación (si los hay, se emite acta de observaciones)."),
         (3, "Acta de observaciones", "Edificación", "Se notifican las observaciones al solicitante — 60 días corridos para subsanar."),
-        (4, "Cálculo de derechos", "Edificación", "Se calcula el valor de los derechos municipales."),
-        (5, "Pago de derechos", "Ciudadano", "El ciudadano paga los derechos correspondientes."),
-        (6, "Otorgamiento de la modificación", "Edificación", "Se otorga la modificación del permiso de edificación."),
-        (7, "Vigencia del permiso", "Dirección de Obras", "El permiso modificado queda vigente por 3 años."),
+        (4, "Plazo de subsanación", "Ciudadano", "El arquitecto dispone de 60 días corridos para subsanar las observaciones."),
+        (5, "Cálculo de derechos", "Edificación", "Se calcula el valor de los derechos municipales."),
+        (6, "Pago de derechos", "Ciudadano", "El ciudadano paga los derechos correspondientes."),
+        (7, "Otorgamiento de la modificación", "Edificación", "Se otorga la modificación del permiso de edificación."),
+        (8, "Vigencia del permiso", "Dirección de Obras", "El permiso modificado queda vigente por 3 años."),
     ],
     "Recepción de Obras": [
         (1, "Solicitud de recepción", "Ciudadano", "El ciudadano solicita la recepción de la obra terminada."),
@@ -131,9 +136,10 @@ FASES_POR_TIPO = {
         (1, "Revisión de antecedentes", "Urbanismo e Inspección", "Se revisan los antecedentes presentados."),
         (2, "Detección de errores", "Urbanismo e Inspección", "Se verifica la existencia de errores (si los hay, se emite acta de observaciones)."),
         (3, "Acta de observaciones", "Urbanismo e Inspección", "Se notifican las observaciones al solicitante — 60 días corridos para subsanar."),
-        (4, "Cálculo de derechos", "Urbanismo e Inspección", "Se calcula el valor de los derechos municipales."),
-        (5, "Pago de derechos", "Ciudadano", "El ciudadano paga los derechos correspondientes."),
-        (6, "Otorgamiento de la resolución", "Urbanismo e Inspección", "Se otorga la resolución de urbanismo."),
+        (4, "Plazo de subsanación", "Ciudadano", "El arquitecto dispone de 60 días corridos para subsanar las observaciones."),
+        (5, "Cálculo de derechos", "Urbanismo e Inspección", "Se calcula el valor de los derechos municipales."),
+        (6, "Pago de derechos", "Ciudadano", "El ciudadano paga los derechos correspondientes."),
+        (7, "Otorgamiento de la resolución", "Urbanismo e Inspección", "Se otorga la resolución de urbanismo."),
     ],
     "Certificado de Urbanización (TEP)": [
         (1, "Ingreso de expediente", "Urbanismo e Inspección", "Ingresa el expediente de urbanización (TEP)."),
@@ -152,7 +158,8 @@ FASES_POR_TIPO = {
         (6, "Registro de terreno", "Urbanismo e Inspección", "Se registra el terreno con fotos, fecha y hora."),
         (7, "Aplicación de normativa", "Urbanismo e Inspección", "Se aplica la normativa (notificación para regularizar o JPL)."),
         (8, "Informe al solicitante", "Urbanismo e Inspección", "Se elabora el informe de fiscalización para el solicitante."),
-        (9, "Expediente y archivo", "Urbanismo e Inspección", "Se integra el expediente y se archiva."),
+        (9, "Expediente de fiscalización", "Urbanismo e Inspección", "Se genera el expediente para dar seguimiento a la solicitud."),
+        (10, "Archivo y catastro interno", "Urbanismo e Inspección", "Se archiva la denuncia resuelta y se actualiza el catastro interno."),
     ],
     "Ocupación de Bien Nacional de Uso Público": [
         (1, "Ingreso de solicitud", "Urbanismo e Inspección", "Ingresa la solicitud de ocupación de BNUP."),
@@ -182,6 +189,27 @@ FASES_POR_TIPO = {
         (4, "Ejecución por la empresa", "Empresa", "La empresa ejecuta la reparación (SECE poste metálico / SOLGELEC hormigón)."),
         (5, "Informe de la empresa", "Empresa", "La empresa informa la reparación realizada."),
         (6, "Aviso a Comunicaciones", "Comunicaciones", "Comunicaciones informa al vecino que la reparación fue realizada."),
+    ],
+    "Obra Eléctrica Municipal": [
+        (1, "Solicitud de ITO", "SECPLAN", "Se solicita al ITO la obra de postación e iluminación."),
+        (2, "Recepción de decreto de contrato", "Administración", "Se recibe el decreto que aprueba el contrato."),
+        (3, "Recepción de decreto de bases", "Administración", "Se recibe el decreto que aprueba las bases."),
+        (4, "Entrega de terreno", "Municipalidad/Contratista", "Se entrega el terreno para iniciar las obras."),
+        (5, "Marcación de puntos", "Contratista", "Se marcan los puntos de instalación de postes metálicos."),
+        (6, "Revisión de obras terminadas", "ITO/SECPLAN", "Se revisan las obras finalizadas."),
+        (7, "Cierre contable con garantía", "Administración", "Se realiza el cierre contable y se verifica la garantía."),
+    ],
+    "Licitación Eléctrica Municipal": [
+        (1, "Inicio de construcción para licitación", "SECPLAN", "Se inicia el proceso de licitación de obras eléctricas municipales."),
+        (2, "Armado de bases generales", "SECPLAN", "Se elaboran las bases y los antecedentes generales."),
+        (3, "Definición del objeto del contrato", "SECPLAN", "Se define el objeto del contrato de licitación."),
+        (4, "Plazos y cronograma", "SECPLAN", "Se establecen los plazos y el cronograma."),
+        (5, "Revisión legal y financiera", "SECPLAN", "Se revisan aspectos legales, financieros y criterios de evaluación."),
+    ],
+    "Denuncia SUBTEL (SOS Emergencia)": [
+        (1, "Envío de denuncia a SUBTEL", "Administración", "Se envía la denuncia a la plataforma SUBTEL."),
+        (2, "Espera de información", "Administración", "Se espera la respuesta de SUBTEL con la información correspondiente."),
+        (3, "Aviso a los vecinos", "Comunicaciones", "Se informa a los vecinos sobre los trabajos terminados."),
     ],
 
     # ── Oficina Impuesto Territorial (p.5: Ley 17.235 / SII) ────────
@@ -240,7 +268,10 @@ def run():
                         "(id_tipo, orden, nombre_fase, responsable, descripcion) "
                         "SELECT id, :orden, :nombre_fase, :responsable, :descripcion "
                         "FROM tipos_tramite WHERE nombre = :nombre_tipo "
-                        "ON CONFLICT (id_tipo, orden) DO NOTHING"
+                        "ON CONFLICT (id_tipo, orden) DO UPDATE SET "
+                        "nombre_fase = EXCLUDED.nombre_fase, "
+                        "responsable = EXCLUDED.responsable, "
+                        "descripcion = EXCLUDED.descripcion"
                     ),
                     {
                         "nombre_tipo": nombre_tipo,
