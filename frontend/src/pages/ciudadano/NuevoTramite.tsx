@@ -289,7 +289,34 @@ export default function NuevoTramite() {
                   ))
                 )}
               </select>
+
+              {/* Ayuda MINVU para Edificación y Urbanismo */}
+              {(() => {
+                const tipoSeleccionado = tipos.find(t => String(t.id) === form.id_tipo);
+                if (tipoSeleccionado && (tipoSeleccionado.depto_responsable === "Edificación" || tipoSeleccionado.depto_responsable === "Urbanismo e Inspección")) {
+                  return (
+                    <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800">
+                      <h4 className="font-semibold mb-1 flex items-center gap-1">
+                        🏛️ Formularios oficiales requeridos
+                      </h4>
+                      <p className="mb-2">
+                        Para ingresar un trámite de <strong>{tipoSeleccionado.depto_responsable}</strong>, debe completar el Formulario Único Nacional correspondiente, además de adjuntar los planos.
+                      </p>
+                      <a 
+                        href="https://www.minvu.gob.cl/elementos-tecnicos/formularios/formularios-de-permisos-de-edificacion/" 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-900 underline"
+                      >
+                        Descargar formularios en el portal del MINVU →
+                      </a>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
+
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
