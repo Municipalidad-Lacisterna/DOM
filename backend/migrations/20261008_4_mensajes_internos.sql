@@ -1,0 +1,11 @@
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS mensajes_internos (
+    id SERIAL PRIMARY KEY,
+    id_solicitud INTEGER NOT NULL REFERENCES solicitudes(id) ON DELETE CASCADE,
+    id_funcionario INTEGER NOT NULL REFERENCES funcionarios(id) ON DELETE CASCADE,
+    mensaje VARCHAR(1000) NOT NULL,
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMIT;

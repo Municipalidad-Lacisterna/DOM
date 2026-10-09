@@ -17,3 +17,5 @@ __all__ = [
     "LogEstadoTramite",
     "FaseTramite",
 ]
+
+from app.models.mensaje_interno import MensajeInterno

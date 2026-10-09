@@ -20,7 +20,9 @@ from app.models import (
     Solicitud,
     TipoTramite,
 )
+from app.models.mensaje_interno import MensajeInterno
 from app.routers.auth import require_funcionario
+from app.schemas.mensaje import MensajeInternoCreate, MensajeInternoOut
 from app.schemas.solicitud import (
     EstadoUpdate,
     FlujoUpdate,
@@ -29,7 +31,13 @@ from app.schemas.solicitud import (
     SolicitudOut,
     SolicitudUpdate,
 )
-from app.services.flujo import EstadoTramite, TransicionFlujoError, resolver_transicion
+from app.services.email import enviar_correo_rechazo
+from app.services.flujo import (
+    AccionFlujo,
+    EstadoTramite,
+    TransicionFlujoError,
+    resolver_transicion,
+)
 
 router = APIRouter(prefix="/api/solicitudes", tags=["solicitudes"])
 
@@ -304,6 +312,13 @@ async def ejecutar_accion_flujo(
             observaciones=detalle,
         )
     )
+
+    if payload.accion == AccionFlujo.RECHAZAR:
+        solicitante = await db.get(Solicitante, solicitud.id_solicitante)
+        if solicitante and solicitante.email:
+            await enviar_correo_rechazo(
+                solicitante.email, solicitud.numero_ingreso, payload.observaciones
+            )
 
     await db.commit()
     await db.refresh(solicitud)
@@ -597,3 +612,67 @@ async def editar_solicitud(
         id_funcionario_asignado=func_asig.id if func_asig else None,
         funcionario_asignado_rut=func_asig.rut if func_asig else None,
     )
+
+
+@router.post(
+    "/{solicitud_id}/mensajes",
+    response_model=MensajeInternoOut,
+    summary="Agregar nota interna al trámite",
+)
+async def agregar_mensaje(
+    solicitud_id: int,
+    payload: MensajeInternoCreate,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
+    db: AsyncSession = Depends(get_db),
+):
+    solicitud = await db.get(Solicitud, solicitud_id)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    mensaje = MensajeInterno(
+        id_solicitud=solicitud_id,
+        id_funcionario=funcionario_auth.id,
+        mensaje=payload.mensaje,
+    )
+    db.add(mensaje)
+    await db.commit()
+    await db.refresh(mensaje)
+
+    return MensajeInternoOut(
+        id=mensaje.id,
+        id_solicitud=mensaje.id_solicitud,
+        mensaje=mensaje.mensaje,
+        fecha_creacion=mensaje.fecha_creacion,
+        funcionario_nombre_rol=f"{funcionario_auth.rut} ({funcionario_auth.departamento})",
+    )
+
+
+@router.get(
+    "/{solicitud_id}/mensajes",
+    response_model=list[MensajeInternoOut],
+    summary="Ver notas internas del trámite",
+)
+async def listar_mensajes(
+    solicitud_id: int,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(MensajeInterno, Funcionario)
+        .join(Funcionario, MensajeInterno.id_funcionario == Funcionario.id)
+        .where(MensajeInterno.id_solicitud == solicitud_id)
+        .order_by(MensajeInterno.fecha_creacion.asc())
+    )
+    resultado = await db.execute(stmt)
+    filas = resultado.all()
+
+    return [
+        MensajeInternoOut(
+            id=msg.id,
+            id_solicitud=msg.id_solicitud,
+            mensaje=msg.mensaje,
+            fecha_creacion=msg.fecha_creacion,
+            funcionario_nombre_rol=f"{func.rut} ({func.departamento})",
+        )
+        for msg, func in filas
+    ]
