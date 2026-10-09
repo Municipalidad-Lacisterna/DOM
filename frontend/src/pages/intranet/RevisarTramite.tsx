@@ -18,6 +18,15 @@ type Aviso = { tipo: "ok" | "err"; texto: string } | null;
  * Muestra los datos del trámite + visor PDF + acciones condicionales
  * según el estado de la solicitud.
  */
+
+interface MensajeInterno {
+  id: number;
+  id_solicitud: number;
+  mensaje: string;
+  fecha_creacion: string;
+  funcionario_nombre_rol: string;
+}
+
 export default function RevisarTramite() {
   const { id } = useParams<{ id: string }>();
   const solicitudId = Number(id);
@@ -49,6 +58,36 @@ export default function RevisarTramite() {
     direccion: "",
     id_tipo: 0,
   });
+
+
+  // ── Notas Internas ─────────────────────────────────────────────
+  const [notas, setNotas] = useState<MensajeInterno[]>([]);
+  const [nuevaNota, setNuevaNota] = useState("");
+  const [enviandoNota, setEnviandoNota] = useState(false);
+
+  useEffect(() => {
+    if (!solicitudId) return;
+    api
+      .get<MensajeInterno[]>(`/solicitudes/${solicitudId}/mensajes`)
+      .then(setNotas)
+      .catch(() => setNotas([]));
+  }, [solicitudId]);
+
+  const agregarNota = async () => {
+    if (!nuevaNota.trim()) return;
+    setEnviandoNota(true);
+    try {
+      const res = await api.post<MensajeInterno>(`/solicitudes/${solicitudId}/mensajes`, {
+        mensaje: nuevaNota,
+      });
+      setNotas([...notas, res]);
+      setNuevaNota("");
+    } catch (e) {
+      setAviso({ tipo: "err", texto: e instanceof Error ? e.message : "Error al agregar nota" });
+    } finally {
+      setEnviandoNota(false);
+    }
+  };
 
   // ── Cargar detalle de la solicitud (si no vino desde la bandeja) ──
   const cargarSolicitud = useCallback(() => {
@@ -439,19 +478,62 @@ export default function RevisarTramite() {
           </div>
         </div>
 
-        {/* ── Columna derecha: documentos ──────────────────────────── */}
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-slate-900">Documentos adjuntos</h2>
-          {documentos.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
-              Esta solicitud no tiene documentos subidos todavía.
+
+        {/* ── Columna derecha: documentos y notas ──────────────────── */}
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h2 className="text-sm font-semibold text-slate-900">Documentos adjuntos</h2>
+            {documentos.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
+                Esta solicitud no tiene documentos subidos todavía.
+              </div>
+            ) : (
+              documentos.map((doc) => (
+                <VisorPDF key={doc.id} documentoId={doc.id} nombre={doc.tipo_documento} />
+              ))
+            )}
+          </div>
+
+          {/* Panel de Notas Internas */}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col h-[500px]">
+            <div className="border-b border-slate-200 px-5 py-4">
+              <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                💬 Notas Internas <span className="text-xs font-normal text-slate-500">(Solo funcionarios)</span>
+              </h2>
             </div>
-          ) : (
-            documentos.map((doc) => (
-              <VisorPDF key={doc.id} documentoId={doc.id} nombre={doc.tipo_documento} />
-            ))
-          )}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50">
+              {notas.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-4">No hay notas internas registradas.</p>
+              ) : (
+                notas.map((nota) => (
+                  <div key={nota.id} className="bg-white border border-slate-200 rounded-lg p-3 text-sm shadow-sm">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-semibold text-indigo-700">{nota.funcionario_nombre_rol}</span>
+                      <span className="text-xs text-slate-400">{new Date(nota.fecha_creacion).toLocaleString("es-CL")}</span>
+                    </div>
+                    <p className="text-slate-700 whitespace-pre-wrap">{nota.mensaje}</p>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-4 border-t border-slate-200 bg-white">
+              <textarea
+                value={nuevaNota}
+                onChange={(e) => setNuevaNota(e.target.value)}
+                placeholder="Escribe una nota para el administrador u otros revisores..."
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none h-20"
+              />
+              <button
+                onClick={agregarNota}
+                disabled={enviandoNota || !nuevaNota.trim()}
+                className="mt-2 w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {enviandoNota ? "Agregando..." : "Agregar nota"}
+              </button>
+            </div>
+          </div>
         </div>
+
       </div>
 
       {/* ── Flujo del trámite (fases del tipo) ───────────────────── */}
