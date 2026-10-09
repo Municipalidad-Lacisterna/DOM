@@ -34,7 +34,8 @@ const INICIAL: Formulario = {
 
 export default function NuevoTramite() {
   const [form, setForm] = useState<Formulario>(INICIAL);
-  const [archivos, setArchivos] = useState<File[]>([]);
+  const [archivos, setArchivos] = useState<{file: File, tipo: string}[]>([]);
+  const [tipoAdjuntoActual, setTipoAdjuntoActual] = useState("Planos");
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<SolicitudOut | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,8 +79,9 @@ export default function NuevoTramite() {
       e.target.value = "";
       return;
     }
-    setArchivos((prev) => [...prev, ...files]);
+    setArchivos((prev) => [...prev, ...files.map(file => ({ file, tipo: tipoAdjuntoActual }))]);
     setError(null);
+    e.target.value = "";
   };
 
   const eliminarArchivo = (index: number) => {
@@ -113,8 +115,8 @@ export default function NuevoTramite() {
         for (const file of archivos) {
           const formData = new FormData();
           formData.append("id_solicitud", String(res.id));
-          formData.append("tipo_documento", "Adjunto ciudadano");
-          formData.append("archivo", file);
+          formData.append("tipo_documento", file.tipo);
+          formData.append("archivo", file.file);
           try {
             await api.postForm<Documento>("/documentos/upload", formData);
           } catch {
@@ -323,26 +325,42 @@ export default function NuevoTramite() {
                 Documentos adjuntos (PDF)
               </label>
               <div className="space-y-3">
-                <label className="flex cursor-pointer items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600 transition-colors hover:border-sky-400 hover:bg-sky-50">
-                  <span className="flex items-center gap-2 font-medium">
-                    📎 Haga clic para adjuntar PDFs
-                  </span>
-                  <input
-                    type="file"
-                    accept="application/pdf,.pdf"
-                    multiple
-                    onChange={manejarArchivo}
-                    className="hidden"
-                  />
-                </label>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                  <select 
+                    value={tipoAdjuntoActual}
+                    onChange={(e) => setTipoAdjuntoActual(e.target.value)}
+                    className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  >
+                    <option value="Formulario MINVU">Formulario MINVU</option>
+                    <option value="Planos">Planos de Arquitectura/Especialidades</option>
+                    <option value="Certificados">Certificados Anexos</option>
+                    <option value="Otro">Otro Documento</option>
+                  </select>
+                  
+                  <label className="flex-1 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700">
+                    <span className="flex items-center gap-2">
+                      📎 Seleccionar PDFs
+                    </span>
+                    <input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      multiple
+                      onChange={manejarArchivo}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
                 
-                {archivos.length > 0 && (
-                  <ul className="space-y-2">
-                    {archivos.map((file, i) => (
+                                {archivos.length > 0 && (
+                  <ul className="space-y-2 mt-4">
+                    {archivos.map((item, i) => (
                       <li key={i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
-                        <span className="truncate max-w-[200px]" title={file.name}>📄 {file.name}</span>
+                        <div>
+                          <span className="font-semibold text-slate-700 mr-2">[{item.tipo}]</span>
+                          <span className="truncate max-w-[150px] inline-block align-bottom" title={item.file.name}>{item.file.name}</span>
+                        </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-xs text-slate-400">{(file.size / 1024).toFixed(0)} KB</span>
+                          <span className="text-xs text-slate-400">{(item.file.size / 1024).toFixed(0)} KB</span>
                           <button
                             type="button"
                             onClick={() => eliminarArchivo(i)}
