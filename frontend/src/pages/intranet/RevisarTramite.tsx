@@ -33,7 +33,7 @@ export default function RevisarTramite() {
   const [cargando, setCargando] = useState(!inicial);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<Aviso>(null);
-  const [mostrarObs, setMostrarObs] = useState(false);
+  const [mostrarObs, setMostrarObs] = useState<"observar" | "rechazar" | null>(null);
   const [observaciones, setObservaciones] = useState("");
   const [enviando, setEnviando] = useState(false);
 
@@ -93,7 +93,7 @@ export default function RevisarTramite() {
   }, [editando]);
 
   const ejecutarAccionFlujo = async (
-    accion: "iniciar" | "avanzar" | "observar" | "reingresar",
+    accion: "iniciar" | "avanzar" | "observar" | "reingresar" | "rechazar",
     observacionesEnvio?: string,
   ) => {
     setEnviando(true);
@@ -106,7 +106,7 @@ export default function RevisarTramite() {
       setSolicitud((s) =>
         s ? { ...s, estado_actual: res.estado_actual, fase_actual: res.fase_actual } : s,
       );
-      setMostrarObs(false);
+      setMostrarObs(null);
       setObservaciones("");
       setAviso({ tipo: "ok", texto: `Trámite actualizado a "${res.estado_actual}".` });
     } catch (e) {
@@ -280,11 +280,18 @@ export default function RevisarTramite() {
                     : "Completar fase y avanzar"}
                 </button>
                 <button
-                  onClick={() => setMostrarObs(true)}
+                  onClick={() => setMostrarObs("observar")}
                   disabled={enviando}
                   className="w-full rounded-lg border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition-colors hover:bg-orange-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                 >
                   📝 Emitir observaciones
+                </button>
+                <button
+                  onClick={() => setMostrarObs("rechazar")}
+                  disabled={enviando}
+                  className="w-full rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                >
+                  ❌ Rechazar trámite (Inadmisible)
                 </button>
               </div>
             )}
@@ -299,30 +306,31 @@ export default function RevisarTramite() {
               </button>
             )}
 
-            {/* Panel de observaciones (Emitir observaciones) */}
+            
+            {/* Panel de observaciones o rechazo */}
             {mostrarObs && (
-              <div className="mt-3 space-y-3 rounded-lg border border-orange-200 bg-orange-50/50 p-4">
+              <div className={`mt-3 space-y-3 rounded-lg border p-4 ${mostrarObs === "rechazar" ? "border-red-200 bg-red-50/50" : "border-orange-200 bg-orange-50/50"}`}>
                 <label className="block text-sm font-medium text-slate-700">
-                  Observaciones para el ciudadano
+                  {mostrarObs === "rechazar" ? "Motivo del rechazo" : "Observaciones para el ciudadano"}
                   <textarea
                     value={observaciones}
                     onChange={(e) => setObservaciones(e.target.value)}
                     rows={4}
-                    placeholder="Ej: Falta el plano de emplazamiento firmado por el arquitecto…"
-                    className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                    placeholder={mostrarObs === "rechazar" ? "Ej: El trámite no corresponde a este departamento..." : "Ej: Falta el plano de emplazamiento..."}
+                    className={`mt-1.5 w-full rounded-lg border bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${mostrarObs === "rechazar" ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-slate-300 focus:border-orange-400 focus:ring-orange-400"}`}
                   />
                 </label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => ejecutarAccionFlujo("observar", observaciones)}
+                    onClick={() => ejecutarAccionFlujo(mostrarObs, observaciones)}
                     disabled={enviando || !observaciones.trim()}
-                    className="flex-1 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:bg-slate-300 ${mostrarObs === "rechazar" ? "bg-red-500 hover:bg-red-600" : "bg-orange-500 hover:bg-orange-600"}`}
                   >
-                    {enviando ? "Enviando…" : "Enviar al ciudadano"}
+                    {enviando ? "Enviando…" : mostrarObs === "rechazar" ? "Confirmar rechazo" : "Enviar observaciones"}
                   </button>
                   <button
                     onClick={() => {
-                      setMostrarObs(false);
+                      setMostrarObs(null);
                       setObservaciones("");
                     }}
                     className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"

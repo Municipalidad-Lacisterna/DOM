@@ -25,6 +25,7 @@ export interface SolicitudOut {
   id_solicitante: number;
   id_predio: number;
   id_tipo: number;
+  id_funcionario_asignado?: number | null;
   fecha_creacion: string | null;
 }
 
@@ -42,6 +43,8 @@ export interface BandejaItem {
   solicitante_email: string;
   predio_rol_sii: string;
   predio_direccion: string;
+  id_funcionario_asignado?: number | null;
+  funcionario_asignado_rut?: string | null;
 }
 
 export interface TipoTramite {
