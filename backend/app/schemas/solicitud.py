@@ -55,11 +55,11 @@ class FlujoUpdate(BaseModel):
     @model_validator(mode="after")
     def exigir_observaciones(self) -> Self:
         if (
-            self.accion is AccionFlujo.OBSERVAR
+            self.accion in (AccionFlujo.OBSERVAR, AccionFlujo.RECHAZAR)
             and not (self.observaciones or "").strip()
         ):
             raise ValueError(
-                "Las observaciones son obligatorias al devolver un trámite"
+                "Las observaciones son obligatorias al observar o rechazar un trámite"
             )
         return self
 
@@ -88,6 +88,7 @@ class SolicitudOut(BaseModel):
     id_solicitante: int
     id_predio: int
     id_tipo: int
+    id_funcionario_asignado: int | None = None
     fecha_creacion: datetime | None = None
 
 
@@ -110,3 +111,26 @@ class SolicitudBandejaOut(BaseModel):
 
     predio_rol_sii: str
     predio_direccion: str
+    id_funcionario_asignado: int | None = None
+    funcionario_asignado_rut: str | None = None
+
+
+class AsignarUpdate(BaseModel):
+    id_funcionario: int | None = Field(
+        None, description="ID del funcionario a asignar, o null para desasignar"
+    )
+
+
+class LogEstadoOut(BaseModel):
+    id: int
+    estado_anterior: str | None
+    estado_nuevo: str
+    fecha_cambio: datetime
+    observaciones: str | None
+
+class FaseTramiteInfo(BaseModel):
+    nombre_fase: str
+
+class SolicitudCiudadanoOut(SolicitudBandejaOut):
+    fase_tramite: FaseTramiteInfo | None = None
+    historial: list[LogEstadoOut] = []

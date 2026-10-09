@@ -8,6 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.database.config import get_db
 from app.models import (
@@ -33,6 +34,8 @@ from app.services.flujo import EstadoTramite, TransicionFlujoError, resolver_tra
 router = APIRouter(prefix="/api/solicitudes", tags=["solicitudes"])
 
 # ── Flujo válido de estados del trámite ─────────────────────────────
+FuncionarioAsignado = aliased(Funcionario)
+
 ESTADOS_VALIDOS: set[str] = {
     "Ingresado",
     "En Revisión",
@@ -198,7 +201,10 @@ async def cambiar_estado(
             detail="El trámite ya está en ese estado",
         )
 
-    if payload.estado_nuevo not in TRANSICIONES_ESTADO_PERMITIDAS[solicitud.estado_actual]:
+    if (
+        payload.estado_nuevo
+        not in TRANSICIONES_ESTADO_PERMITIDAS[solicitud.estado_actual]
+    ):
         raise HTTPException(
             status_code=400,
             detail=(
@@ -251,11 +257,15 @@ async def ejecutar_accion_flujo(
 ):
     solicitud = await db.get(Solicitud, solicitud_id)
     if solicitud is None:
-        raise HTTPException(status_code=404, detail=f"Solicitud {solicitud_id} no encontrada")
+        raise HTTPException(
+            status_code=404, detail=f"Solicitud {solicitud_id} no encontrada"
+        )
 
     total_fases = (
         await db.execute(
-            select(func.count(FaseTramite.id)).where(FaseTramite.id_tipo == solicitud.id_tipo)
+            select(func.count(FaseTramite.id)).where(
+                FaseTramite.id_tipo == solicitud.id_tipo
+            )
         )
     ).scalar_one()
 
@@ -324,10 +334,14 @@ async def bandeja(
     """
 
     stmt = (
-        select(Solicitud, TipoTramite, Solicitante, Predio)
+        select(Solicitud, TipoTramite, Solicitante, Predio, FuncionarioAsignado)
         .join(TipoTramite, Solicitud.id_tipo == TipoTramite.id)
         .join(Solicitante, Solicitud.id_solicitante == Solicitante.id)
         .join(Predio, Solicitud.id_predio == Predio.id)
+        .outerjoin(
+            FuncionarioAsignado,
+            Solicitud.id_funcionario_asignado == FuncionarioAsignado.id,
+        )
         .order_by(Solicitud.fecha_creacion.desc())
         .offset(skip)
         .limit(limit)
@@ -356,17 +370,22 @@ async def bandeja(
             solicitante_email=sol_s.email,
             predio_rol_sii=prd.rol_sii,
             predio_direccion=prd.direccion,
+            id_funcionario_asignado=func_asig.id if func_asig else None,
+            funcionario_asignado_rut=func_asig.rut if func_asig else None,
         )
-        for sol, tipo, sol_s, prd in filas
+        for sol, tipo, sol_s, prd, func_asig in filas
     ]
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 3b. GET  /api/solicitudes/estado/{numero_ingreso}
 # ═══════════════════════════════════════════════════════════════════
+from app.schemas.solicitud import SolicitudCiudadanoOut
+
+
 @router.get(
     "/estado/{numero_ingreso}",
-    response_model=SolicitudBandejaOut,
+    response_model=SolicitudCiudadanoOut,
     summary="Consulta pública de estado por código de seguimiento (folio)",
 )
 async def consultar_estado_por_folio(
@@ -378,10 +397,14 @@ async def consultar_estado_por_folio(
     Devuelve la misma forma que el detalle de bandeja.
     """
     stmt = (
-        select(Solicitud, TipoTramite, Solicitante, Predio)
+        select(Solicitud, TipoTramite, Solicitante, Predio, FuncionarioAsignado)
         .join(TipoTramite, Solicitud.id_tipo == TipoTramite.id)
         .join(Solicitante, Solicitud.id_solicitante == Solicitante.id)
         .join(Predio, Solicitud.id_predio == Predio.id)
+        .outerjoin(
+            FuncionarioAsignado,
+            Solicitud.id_funcionario_asignado == FuncionarioAsignado.id,
+        )
         .where(Solicitud.numero_ingreso == numero_ingreso)
     )
     resultado = await db.execute(stmt)
@@ -393,7 +416,7 @@ async def consultar_estado_por_folio(
             detail=f"No existe ningún trámite con el código {numero_ingreso}",
         )
 
-    sol, tipo, sol_s, prd = fila
+    sol, tipo, sol_s, prd, func_asig = fila
     return SolicitudBandejaOut(
         id=sol.id,
         numero_ingreso=sol.numero_ingreso,
@@ -408,6 +431,8 @@ async def consultar_estado_por_folio(
         solicitante_email=sol_s.email,
         predio_rol_sii=prd.rol_sii,
         predio_direccion=prd.direccion,
+        id_funcionario_asignado=func_asig.id if func_asig else None,
+        funcionario_asignado_rut=func_asig.rut if func_asig else None,
     )
 
 
@@ -426,10 +451,14 @@ async def obtener_solicitud(
 ):
     """Devuelve una solicitud con datos de trámite, solicitante y predio."""
     stmt = (
-        select(Solicitud, TipoTramite, Solicitante, Predio)
+        select(Solicitud, TipoTramite, Solicitante, Predio, FuncionarioAsignado)
         .join(TipoTramite, Solicitud.id_tipo == TipoTramite.id)
         .join(Solicitante, Solicitud.id_solicitante == Solicitante.id)
         .join(Predio, Solicitud.id_predio == Predio.id)
+        .outerjoin(
+            FuncionarioAsignado,
+            Solicitud.id_funcionario_asignado == FuncionarioAsignado.id,
+        )
         .where(Solicitud.id == solicitud_id)
     )
     resultado = await db.execute(stmt)
@@ -440,7 +469,7 @@ async def obtener_solicitud(
             status_code=404, detail=f"Solicitud {solicitud_id} no encontrada"
         )
 
-    sol, tipo, sol_s, prd = fila
+    sol, tipo, sol_s, prd, func_asig = fila
     return SolicitudBandejaOut(
         id=sol.id,
         numero_ingreso=sol.numero_ingreso,
@@ -455,6 +484,8 @@ async def obtener_solicitud(
         solicitante_email=sol_s.email,
         predio_rol_sii=prd.rol_sii,
         predio_direccion=prd.direccion,
+        id_funcionario_asignado=func_asig.id if func_asig else None,
+        funcionario_asignado_rut=func_asig.rut if func_asig else None,
     )
 
 
@@ -536,14 +567,18 @@ async def editar_solicitud(
     await db.commit()
 
     stmt = (
-        select(Solicitud, TipoTramite, Solicitante, Predio)
+        select(Solicitud, TipoTramite, Solicitante, Predio, FuncionarioAsignado)
         .join(TipoTramite, Solicitud.id_tipo == TipoTramite.id)
         .join(Solicitante, Solicitud.id_solicitante == Solicitante.id)
         .join(Predio, Solicitud.id_predio == Predio.id)
+        .outerjoin(
+            FuncionarioAsignado,
+            Solicitud.id_funcionario_asignado == FuncionarioAsignado.id,
+        )
         .where(Solicitud.id == solicitud_id)
     )
     resultado = await db.execute(stmt)
-    sol, tipo, sol_s, prd = resultado.one()
+    sol, tipo, sol_s, prd, func_asig = resultado.one()
 
     return SolicitudBandejaOut(
         id=sol.id,
@@ -559,4 +594,6 @@ async def editar_solicitud(
         solicitante_email=sol_s.email,
         predio_rol_sii=prd.rol_sii,
         predio_direccion=prd.direccion,
+        id_funcionario_asignado=func_asig.id if func_asig else None,
+        funcionario_asignado_rut=func_asig.rut if func_asig else None,
     )

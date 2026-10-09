@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, func
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import relationship
+
 from app.database.config import Base
 
 
@@ -21,6 +22,9 @@ class Solicitud(Base):
     )
     estado_actual = Column(String(50), nullable=False, default="ingresado")
     fase_actual = Column(Integer, nullable=False, default=1, server_default="1")
+    id_funcionario_asignado = Column(
+        Integer, ForeignKey("funcionarios.id", ondelete="SET NULL"), nullable=True
+    )
 
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_actualizacion = Column(
@@ -31,7 +35,12 @@ class Solicitud(Base):
     solicitante = relationship("Solicitante", back_populates="solicitudes")
     predio = relationship("Predio", back_populates="solicitudes")
     tipo_tramite = relationship("TipoTramite", back_populates="solicitudes")
-    documentos = relationship("Documento", back_populates="solicitud", cascade="all, delete-orphan")
+    documentos = relationship(
+        "Documento", back_populates="solicitud", cascade="all, delete-orphan"
+    )
+    funcionario_asignado = relationship(
+        "Funcionario", foreign_keys=[id_funcionario_asignado]
+    )
     logs = relationship("LogEstadoTramite", back_populates="solicitud")
 
     def __repr__(self):

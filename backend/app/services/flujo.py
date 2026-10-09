@@ -6,6 +6,7 @@ class EstadoTramite(StrEnum):
     INGRESADO = "Ingresado"
     EN_REVISION = "En Revisión"
     EN_CORRECCION = "En Corrección"
+    RECHAZADO = "Rechazado"
     FINALIZADO = "Finalizado"
 
 
@@ -14,6 +15,7 @@ class AccionFlujo(StrEnum):
     AVANZAR = "avanzar"
     OBSERVAR = "observar"
     REINGRESAR = "reingresar"
+    RECHAZAR = "rechazar"
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +58,11 @@ def resolver_transicion(
             return ResultadoTransicion(EstadoTramite.EN_CORRECCION, fase_actual)
         case EstadoTramite.EN_CORRECCION, AccionFlujo.REINGRESAR:
             return ResultadoTransicion(EstadoTramite.EN_REVISION, fase_actual)
+        case estado, AccionFlujo.RECHAZAR if estado not in (
+            EstadoTramite.FINALIZADO,
+            EstadoTramite.RECHAZADO,
+        ):
+            return ResultadoTransicion(EstadoTramite.RECHAZADO, fase_actual)
         case _:
             raise TransicionFlujoError(
                 estado, accion, "la transición no está permitida"
