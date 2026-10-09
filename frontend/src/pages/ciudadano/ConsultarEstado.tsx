@@ -4,10 +4,28 @@ import { api } from "../../lib/api";
 import EstadoBadge from "../../components/EstadoBadge";
 import type { BandejaItem } from "../../lib/types";
 
+interface LogTramite {
+  id: number;
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  fecha_cambio: string;
+  observaciones: string | null;
+}
+
+interface FaseTramiteInfo {
+  nombre_fase: string;
+}
+
+interface DetalleCiudadano extends BandejaItem {
+  fase_tramite?: FaseTramiteInfo | null;
+  historial?: LogTramite[];
+}
+
+
 export default function ConsultarEstado() {
   const [params] = useSearchParams();
   const [folio, setFolio] = useState(params.get("folio") ?? "");
-  const [datos, setDatos] = useState<BandejaItem | null>(null);
+  const [datos, setDatos] = useState<DetalleCiudadano | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -27,7 +45,7 @@ export default function ConsultarEstado() {
     setError(null);
     setDatos(null);
     try {
-      const res = await api.get<BandejaItem>(
+      const res = await api.get<DetalleCiudadano>(
         `/solicitudes/estado/${encodeURIComponent(codigo)}`,
       );
       setDatos(res);
@@ -107,7 +125,18 @@ export default function ConsultarEstado() {
               </div>
               <EstadoBadge estado={datos.estado_actual} />
             </div>
+
             <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Etapa actual
+                </dt>
+                <dd className="mt-0.5 text-sm font-medium text-slate-800">
+                  {datos.fase_tramite?.nombre_fase ?? `Fase ${datos.fase_actual}`}
+                </dd>
+              </div>
+              {/* Other details preserved */}
+
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   Tipo de trámite
@@ -139,7 +168,46 @@ export default function ConsultarEstado() {
                   {datos.predio_rol_sii ? ` · Rol ${datos.predio_rol_sii}` : ""}
                 </dd>
               </div>
+
             </dl>
+            
+            {datos.fase_tramite?.nombre_fase?.toLowerCase().includes("pago") && (
+              <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <h3 className="font-bold text-emerald-900 mb-1">💳 Pago de Derechos Requerido</h3>
+                <p className="text-sm text-emerald-800 mb-3">
+                  Su trámite se encuentra en la etapa de pago. Por favor, regularice el cobro para continuar con el procedimiento.
+                </p>
+                <a href={`https://pagos.lacisterna.cl/pagar?folio=${datos.numero_ingreso}`} target="_blank" rel="noreferrer" className="inline-block bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors">
+                  Ir al portal de pagos →
+                </a>
+              </div>
+            )}
+
+            {datos.historial && datos.historial.length > 0 && (
+              <div className="mt-6 border-t border-slate-100 pt-4">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">Historial y Observaciones</h3>
+                <div className="space-y-4">
+                  {datos.historial.map((log) => (
+                    <div key={log.id} className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-700">
+                          {log.estado_nuevo}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          {new Date(log.fecha_cambio).toLocaleString("es-CL")}
+                        </span>
+                      </div>
+                      {log.observaciones && (
+                        <div className="mt-1 rounded-md bg-slate-50 border border-slate-100 p-2.5 text-slate-600">
+                          {log.observaciones}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <p className="mt-4 text-xs text-slate-400">
               Guarde bien su código de seguimiento: es su comprobante para consultar el
               estado del trámite en el portal.
