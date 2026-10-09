@@ -325,13 +325,7 @@ export default function RevisarTramite() {
                 >
                   📝 Emitir observaciones
                 </button>
-                <button
-                  onClick={() => setMostrarObs("rechazar")}
-                  disabled={enviando}
-                  className="w-full rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-                >
-                  ❌ Rechazar trámite (Inadmisible)
-                </button>
+
               </div>
             )}
 
@@ -346,16 +340,27 @@ export default function RevisarTramite() {
             )}
 
             
+            
+            {!["Finalizado", "Rechazado"].includes(solicitud.estado_actual) && (
+              <button
+                onClick={() => setMostrarObs("rechazar")}
+                disabled={enviando}
+                className="mb-3 w-full rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                ❌ Cancelar trámite
+              </button>
+            )}
+
             {/* Panel de observaciones o rechazo */}
             {mostrarObs && (
               <div className={`mt-3 space-y-3 rounded-lg border p-4 ${mostrarObs === "rechazar" ? "border-red-200 bg-red-50/50" : "border-orange-200 bg-orange-50/50"}`}>
                 <label className="block text-sm font-medium text-slate-700">
-                  {mostrarObs === "rechazar" ? "Motivo del rechazo" : "Observaciones para el ciudadano"}
+                  {mostrarObs === "rechazar" ? "Motivo de la cancelación" : "Observaciones para el ciudadano"}
                   <textarea
                     value={observaciones}
                     onChange={(e) => setObservaciones(e.target.value)}
                     rows={4}
-                    placeholder={mostrarObs === "rechazar" ? "Ej: El trámite no corresponde a este departamento..." : "Ej: Falta el plano de emplazamiento..."}
+                    placeholder={mostrarObs === "rechazar" ? "Ej: El trámite fue ingresado por error o no cumple los requisitos mínimos..." : "Ej: Falta el plano de emplazamiento..."}
                     className={`mt-1.5 w-full rounded-lg border bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${mostrarObs === "rechazar" ? "border-red-300 focus:border-red-400 focus:ring-red-400" : "border-slate-300 focus:border-orange-400 focus:ring-orange-400"}`}
                   />
                 </label>
@@ -365,7 +370,7 @@ export default function RevisarTramite() {
                     disabled={enviando || !observaciones.trim()}
                     className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:bg-slate-300 ${mostrarObs === "rechazar" ? "bg-red-500 hover:bg-red-600" : "bg-orange-500 hover:bg-orange-600"}`}
                   >
-                    {enviando ? "Enviando…" : mostrarObs === "rechazar" ? "Confirmar rechazo" : "Enviar observaciones"}
+                    {enviando ? "Enviando…" : mostrarObs === "rechazar" ? "Confirmar cancelación y notificar" : "Enviar observaciones"}
                   </button>
                   <button
                     onClick={() => {
