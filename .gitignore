@@ -1,0 +1,30 @@
+# Entorno y venv
+.venv/
+venv/
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Storage y runtime
+backend/storage/
+storage/
+*.log
+
+# Scripts de parche / temporales locales
+patch_*.py
+fix_ui*.py
+
+# Editor
+.vscode/
+.idea/
+.DS_Store

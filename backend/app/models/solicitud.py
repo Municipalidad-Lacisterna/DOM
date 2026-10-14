@@ -42,6 +42,7 @@ class Solicitud(Base):
         "Funcionario", foreign_keys=[id_funcionario_asignado]
     )
     logs = relationship("LogEstadoTramite", back_populates="solicitud")
+    mensajes_internos = relationship("MensajeInterno", back_populates="solicitud", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Solicitud id={self.id} nro={self.numero_ingreso} estado={self.estado_actual}>"

@@ -1,89 +1,70 @@
-# 🏛️ DOM en Línea Municipal
+# DOM en Linea - Municipalidad de La Cisterna
 
-Sistema de trámites de la Dirección de Obras en línea — **La Cisterna**.
+Sistema de tramitacion digital para la Direccion de Obras Municipales (DOM) de La Cisterna.
 
-Un ciudadano puede **ingresar un trámite** (permisos de edificación, certificados, subdivisión predial, etc.), adjuntar sus planos en PDF y **hacer seguimiento** por folio. Los **funcionarios** ingresan a una intranet con bandeja de trámites para revisar, editar y cambiar el estado de cada solicitud.
+Permite a los vecinos ingresar solicitudes de permisos y certificados, adjuntar documentacion tecnica o planos en formato PDF y realizar seguimiento del estado mediante numero de folio. Para los funcionarios municipales, provee una intranet protegida por autenticacion con bandeja de entrada, asignacion de expedientes y avance secuencial por fases.
 
-| Componente | Tecnología | Puerto |
+| Componente | Tecnologia | Puerto local |
 |---|---|---|
-| **API** (backend) | FastAPI + PostgreSQL | `http://localhost:8001` (docs en `/docs`) |
-| **Portal web** (frontend) | React 19 + TypeScript + Vite | `http://localhost:5173` |
+| **Backend API** | FastAPI + SQLAlchemy + PostgreSQL | `http://localhost:8001` (documentacion en `/docs`) |
+| **Frontend Web** | React 19 + TypeScript + Vite | `http://localhost:5173` |
 
-> ⚠️ **Datos demo:** todo el contenido son datos de ejemplo para desarrollo (funcionarios, RUT y credenciales de BD de prueba). NO usar en producción.
-
----
-
-## ☁️ La forma más fácil: probar sin instalar nada (GitHub Codespaces)
-
-¿No quieres (o no puedes) instalar Docker ni PostgreSQL en tu PC? **GitHub crea el entorno completo en la nube** y tú solo usas el navegador:
-
-1. Abre este repositorio en GitHub.
-2. Botón verde **Code** → pestaña **Codespaces** → **Create codespace on main**.
-3. Espera 2-3 minutos: GitHub levanta solo la base de datos, la API y el portal web (y ya deja los datos de ejemplo cargados).
-4. Cuando GitHub te pregunte por el **puerto 5173**, elige **"Open in Browser"** → ahí está el sistema funcionando.
-
-> Nota: esta opción requiere que la organización tenga GitHub Codespaces habilitado. Si no aparece la pestaña, usa la Opción A (Docker) más abajo — funciona en Windows sin instalar Python ni PostgreSQL.
+> **Nota:** La configuracion inicial incluye datos de prueba para desarrollo local (cuentas de funcionarios de ejemplo, tipos de tramite del catalogo y solicitudes demo).
 
 ---
 
-## 📁 Estructura del repositorio
+## Estructura del proyecto
 
 ```
 .
-├── backend/            # API FastAPI + SQLAlchemy + PostgreSQL
-│   ├── app/            # modelos, routeres, schemas, seed
+├── backend/            # API FastAPI + PostgreSQL
+│   ├── app/            # Modelos, routers, esquemas Pydantic y seed
 │   ├── Dockerfile
 │   └── requirements.txt
-├── frontend/           # Portal web React + Vite (portales ciudadano e intranet)
+├── frontend/           # Aplicacion React + Vite (portal ciudadano e intranet)
 │   ├── src/
 │   ├── Dockerfile
 │   └── package.json
-└── docker-compose.yml  # Ambiente completo (BD + API + web) en un comando
+└── docker-compose.yml  # Orquestacion de BD, API y cliente web
 ```
 
 ---
 
-## 🐳 Opción A — Docker Compose (recomendada, la más fácil)
+## Despliegue con Docker Compose (Recomendado)
 
-Funciona igual en **Windows (Docker Desktop)**, **macOS** y **Linux**: es la mejor opción si el equipo no tiene Python, Node ni PostgreSQL instalados.
-
-Solo necesitas tener **Docker** instalado (Docker Desktop o Docker Engine + compose) y ejecutar los comandos en PowerShell o tu terminal:
+Es el metodo mas directo tanto en Linux como en macOS o Windows con Docker Desktop:
 
 ```bash
-# 1. Levantar BD + API + portal web
+# 1. Construir e iniciar contenedores
 docker compose up --build -d
 
-# 2. Primera vez: crear las tablas
+# 2. Inicializar tablas de la base de datos
 docker compose exec api python -m app.create_tables
 
-# 3. Primera vez: sembrar catálogo (16 tipos de trámite, 7 funcionarios, 118 fases)
+# 3. Cargar catalogo inicial (16 tipos de tramite, 7 funcionarios y 118 fases)
 docker compose exec api python -m app.seed
 ```
 
-Abre en tu navegador:
+Accesos locales:
+- **Portal ciudadano e Intranet:** `http://localhost:5173`
+- **Documentacion interactiva de la API:** `http://localhost:8001/docs`
 
-- **Portal web:** http://localhost:5173
-- **Documentación de la API:** http://localhost:8001/docs
-
-Para ver los logs o detener:
-
+Comandos utiles de administracion:
 ```bash
-docker compose logs -f     # ver en vivo
-docker compose down        # detener (conserva los datos en el volumen)
+docker compose logs -f     # Ver logs en tiempo real
+docker compose down        # Detener contenedores (mantiene volumen de base de datos)
 ```
-
-> 💡 **En Windows:** instala **Docker Desktop** desde https://www.docker.com/products/docker-desktop/ (la primera vez te pedirá habilitar WSL2 y reiniciar). Después, todos los comandos de arriba se ejecutan igual en PowerShell o cmd — no cambia nada.
 
 ---
 
-## 🐧 Opción B — Instalación nativa (Linux / macOS / Windows)
+## Instalacion local sin Docker
 
-Requiere: **Python 3.11+**, **Node.js 18+** y **PostgreSQL 16** corriendo. Si estás en Windows, salta a la [sub-sección PowerShell](#¿sin-docker-y-en-windows-pasos-con-powershell) al final.
+Requiere Python 3.11+, Node.js 18+ y PostgreSQL 16 configurado localmente.
 
 ### 1. Base de datos
 
+Crear base de datos y usuario:
 ```bash
-# Crear la base y el usuario (ajusta a tu instalación de PostgreSQL)
 psql -U postgres -c "CREATE USER dom_user WITH PASSWORD 'dom_pass_2026';"
 psql -U postgres -c "CREATE DATABASE dom_municipal OWNER dom_user;"
 ```
@@ -96,131 +77,71 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Crear tablas y sembrar datos (usa el conector síncrono → DATABASE_URL_SYNC)
+# Inicializar esquema y catalogo
 export DATABASE_URL_SYNC="postgresql://dom_user:dom_pass_2026@localhost:5432/dom_municipal"
 python -m app.create_tables
 python -m app.seed
 
-# Arrancar la API (usa el conector async → DATABASE_URL)
+# Ejecutar servidor de desarrollo
 export DATABASE_URL="postgresql+asyncpg://dom_user:dom_pass_2026@localhost:5432/dom_municipal"
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-> Si tu PostgreSQL corre en otro puerto (ej. `5433`), cambia el puerto en las dos URLs.
-
 ### 3. Frontend
 
+En una terminal separada:
 ```bash
-cd ../frontend
-npm install
-npm run dev
-```
-
-El portal queda en http://localhost:5173 y el proxy de Vite redirige `/api` → `http://localhost:8001` automáticamente.
-
-### ¿Sin Docker y en Windows? Pasos con PowerShell
-
-1. **PostgreSQL** — instálalo con el instalador oficial de https://www.postgresql.org/download/windows/ (deja el puerto 5432) y crea la base:
-
-```powershell
-psql -U postgres -c "CREATE USER dom_user WITH PASSWORD 'dom_pass_2026';"
-psql -U postgres -c "CREATE DATABASE dom_municipal OWNER dom_user;"
-```
-
-2. **Backend** (PowerShell):
-
-```powershell
-cd backend
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1     # si PowerShell bloquea: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-pip install -r requirements.txt
-
-$env:DATABASE_URL_SYNC="postgresql://dom_user:dom_pass_2026@localhost:5432/dom_municipal"
-python -m app.create_tables
-python -m app.seed
-
-$env:DATABASE_URL="postgresql+asyncpg://dom_user:dom_pass_2026@localhost:5432/dom_municipal"
-uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
-```
-
-3. **Frontend** (en otra ventana de PowerShell):
-
-```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Abre http://localhost:5173. Los pasos 1 y 2 se hacen una sola vez (base de datos y datos de ejemplo); en adelante solo tienes que arrancar la API y el frontend.
+El portal estara disponible en `http://localhost:5173`. El proxy configurado en Vite redirige las peticiones `/api` al backend en el puerto 8001.
 
 ---
 
-## 🔑 Credenciales demo (funcionarios)
+## Cuentas de prueba (Intranet)
 
-Todos los funcionarios comparten la contraseña `dom2026`:
+Contrasena compartida para entorno de pruebas: `dom2026`
 
 | RUT | Departamento | Rol |
 |---|---|---|
 | `11111111-1` | DOTECAP | ejecutor |
 | `22222222-2` | DOTECAP | visor |
-| `33333333-3` | Edificación | ejecutor |
-| `44444444-4` | Urbanismo e Inspección | ejecutor |
-| `55555555-5` | Ejecución | ejecutor |
+| `33333333-3` | Edificacion | ejecutor |
+| `44444444-4` | Urbanismo e Inspeccion | ejecutor |
+| `55555555-5` | Ejecucion | ejecutor |
 | `66666666-6` | Oficina Impuesto Territorial | ejecutor |
-| `77777777-7` | Dirección de Obras | admin |
+| `77777777-7` | Direccion de Obras | admin |
 
 ---
 
-## 🧪 Cómo probar el flujo completo
+## Flujo de tramitacion y estados
 
-1. **Portal Ciudadano** (http://localhost:5173 → "Portal Ciudadano"): ingresa un trámite nuevo con un RUT cualquiera (ej. `12345678-5`), una dirección, y selecciona un tipo de trámite. Anota el **folio** que se genera (ej. `DOM-2026-001`) y adjunta un PDF.
+1. **Ingreso ciudadano (`/`):** El usuario ingresa un nuevo expediente con sus datos basicos, direccion y seleccion de tramite. El sistema asigna un folio correlativo (ej. `DOM-2026-001`) y permite adjuntar planos o documentos PDF.
+2. **Consulta de estado (`/estado`):** Permite verificar en cualquier momento el estado actual del expediente y las observaciones registradas utilizando el folio.
+3. **Gestion funcionaria (`/login/funcionarios`):** El funcionario asignado revisa el expediente en su bandeja, examina los archivos adjuntos y avanza el expediente fase a fase o emite observaciones para subsanacion.
 
-   Para generar un PDF de prueba en Linux:
-   ```bash
-   printf '%%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj\ntrailer<</Root 1 0 R>>\n%%%%EOF\n' > /tmp/plano-prueba.pdf
-   ```
+### Logica de transicion de fases
 
-2. **Seguimiento ciudadano** (http://localhost:5173 → "Consultar estado"): ingresa el folio y verás el estado del trámite sin necesidad de cuenta.
+El catalogo modela el flujo administrativo de la DOM con 16 tramites y 118 fases distribuidas entre las unidades tecnicas.
 
-3. **Intranet de funcionarios** (http://localhost:5173 → "Intranet Funcionarios"): inicia sesión con `11111111-1` / `dom2026`, abre el trámite desde la bandeja y pulsa **Tomar en revisión**. Completa cada fase en orden. El ciudadano verá el estado actualizado al consultar su folio.
+- `estado_actual`: Estado global de la solicitud (`Ingresado`, `En Revision`, `En Correccion`, `Finalizado`).
+- `fase_actual`: Hito especifico dentro del procedimiento reglamentario correspondiente al tipo de tramite.
 
-### Cómo funciona el flujo por fases
+Endpoint de transicion: `PUT /api/solicitudes/{id}/flujo`
 
-Cada tipo de trámite tiene una secuencia propia basada en los procedimientos de la DOM de La Cisterna. El catálogo contiene **16 tipos y 118 fases** repartidas entre DOTECAP, Edificación, Urbanismo e Inspección, Ejecución y la Oficina de Impuesto Territorial.
-
-La solicitud guarda dos datos relacionados:
-
-- `estado_actual`: situación general del expediente, por ejemplo `Ingresado`, `En Revisión`, `En Corrección` o `Finalizado`.
-- `fase_actual`: posición exacta dentro del procedimiento correspondiente al tipo de trámite.
-
-El funcionario opera el flujo mediante `PUT /api/solicitudes/{id}/flujo`:
-
-| Acción | Estado requerido | Resultado |
+| Accion | Estado previo | Efecto |
 |---|---|---|
-| `iniciar` | `Ingresado` | Comienza la revisión en la primera fase. |
-| `avanzar` | `En Revisión` | Completa una sola fase. En la última, finaliza el trámite. |
-| `observar` | `En Revisión` | Envía el expediente a corrección sin perder la fase pendiente. Requiere observaciones. |
-| `reingresar` | `En Corrección` | Retorna a revisión en la misma fase. |
-
-Cada acción registra funcionario, estado anterior, estado nuevo, fase y observaciones en el historial. El endpoint antiguo de estados permanece para compatibilidad, pero rechaza saltos como `Ingresado → Aprobado`.
-
-#### Actualizar una base de datos existente
-
-Para una instalación creada antes de incorporar `fase_actual`, ejecuta la migración y vuelve a sembrar el catálogo:
-
-```bash
-docker compose exec -T db psql -U dom_user -d dom_municipal \
-  < backend/migrations/20261008_flujo_fases.sql
-docker compose exec api python -m app.seed
-```
-
-La migración es idempotente. Conserva las solicitudes existentes y ubica los trámites ya finalizados en su última fase.
+| `iniciar` | `Ingresado` | Pasa a `En Revision` en la primera fase del tramite. |
+| `avanzar` | `En Revision` | Completa la fase actual y avanza a la siguiente; en la ultima fase finaliza el tramite. |
+| `observar` | `En Revision` | Cambia a `En Correccion` conservando la fase para posterior reingreso. |
+| `reingresar` | `En Correccion` | Retorna a `En Revision` tras el ingreso de correcciones por parte del ciudadano. |
 
 ---
 
-## 🔧 Notas de desarrollo
+## Configuracion de entorno y notas tecnicas
 
-- **Migraciones:** el proyecto no usa Alembic; para cambios de esquema en BD existentes se ejecuta SQL manual (para un MVP está bien, documentado en la memoria del proyecto).
-- **Secretos:** la `SECRET_KEY` de los JWT y las credenciales de BD tienen valores de desarrollo. En producción se sobrescriben con variables de entorno.
-- **Uploads:** los PDFs se guardan en `backend/storage/` (configurable con `STORAGE_DIR`).
-- **Tests:** existe una suite E2E en `backend/test_e2e.py` (usa `httpx`).
+- **Variables de entorno:** `SECRET_KEY` para tokens JWT y credenciales de PostgreSQL deben configurarse en variables de entorno o archivo `.env` en ambientes de produccion.
+- **Almacenamiento de archivos:** Los documentos subidos se guardan localmente en el directorio definido por `STORAGE_DIR` (por defecto `backend/storage/`).
+- **Pruebas automatizadas:** La suite de pruebas de integracion end-to-end se encuentra en `backend/test_e2e.py`.
