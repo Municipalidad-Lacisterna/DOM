@@ -40,7 +40,7 @@ export default function Configuracion() {
       </div>
 
       <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-        💡 Estas secciones se implementan en fases posteriores del proyecto.
+        Estas secciones corresponden a módulos de configuración avanzada.
       </div>
     </div>
   );

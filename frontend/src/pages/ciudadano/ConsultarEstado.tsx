@@ -108,7 +108,7 @@ export default function ConsultarEstado() {
 
         {error && (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
@@ -173,7 +173,7 @@ export default function ConsultarEstado() {
             
             {datos.fase_tramite?.nombre_fase?.toLowerCase().includes("pago") && (
               <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                <h3 className="font-bold text-emerald-900 mb-1">💳 Pago de Derechos Requerido</h3>
+                <h3 className="font-bold text-emerald-900 mb-1">Pago de Derechos Requerido</h3>
                 <p className="text-sm text-emerald-800 mb-3">
                   Su trámite se encuentra en la etapa de pago. Por favor, regularice el cobro para continuar con el procedimiento.
                 </p>

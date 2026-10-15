@@ -68,7 +68,7 @@ export default function BandejaEntrada() {
       {/* Errores */}
       {error && (
         <div className="mb-5 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>⚠️ No se pudo cargar la bandeja: {error}</span>
+          <span>No se pudo cargar la bandeja: {error}</span>
           <button
             onClick={() => setIntento((i) => i + 1)}
             className="rounded-lg bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"

@@ -19,9 +19,9 @@ from app.models import (
 
 
 def crear_tablas():
-    print("📦 Creando tablas en PostgreSQL...")
+    print("Creando tablas en PostgreSQL...")
     Base.metadata.create_all(bind=engine_sync)
-    print("✅ Todas las tablas creadas exitosamente.")
+    print("Tablas creadas exitosamente.")
 
 
 if __name__ == "__main__":

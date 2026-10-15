@@ -39,16 +39,16 @@ FAIL = 0
 def ok(nombre):
     global PASS
     PASS += 1
-    print(f"  ✅ {nombre}")
+    print(f"  [OK] {nombre}")
 
 def fail(nombre, msg):
     global FAIL
     FAIL += 1
-    print(f"  ❌ {nombre}: {msg}")
+    print(f"  [ERROR] {nombre}: {msg}")
 
 
 # ════════════════════════════════════════════════════════════════════
-print("\n🧪 PRUEBAS END-TO-END — DOM en Línea Municipal (Fase 4)\n")
+print("\nPRUEBAS END-TO-END — DOM en Línea Municipal (Fase 4)\n")
 
 # ── 1. Health check ────────────────────────────────────────────────
 r = httpx.get(f"{BASE}/health")
@@ -195,7 +195,7 @@ if r.status_code == 200:
     pers = r.json()
     assert pers["solicitante_email"] == "maria.editada@mail.cl"
     assert pers["predio_direccion"] == "Av. Los Aromos 9999, Depto 5"
-    ok("GET /solicitudes/{id} → edición persistida ✓")
+    ok("GET /solicitudes/{id} → edición persistida")
 else:
     fail("GET /solicitudes/{id} (persistencia edición)", f"status={r.status_code}")
 
@@ -265,7 +265,7 @@ if r.status_code == 200:
     assert "application/pdf" in ct, f"content-type inesperado: {ct}"
     assert "inline" in cd, f"content-disposition no es inline: {cd}"
     assert b"%%EOF" in r.content, "PDF incompleto: falta EOF"
-    ok(f"GET /documentos/{documento_id}/archivo → inline PDF ✓")
+    ok(f"GET /documentos/{documento_id}/archivo → inline PDF")
 else:
     fail("GET /documentos/{id}/archivo", f"status={r.status_code}")
 
@@ -286,7 +286,7 @@ r = httpx.get(f"{BASE}/api/documentos/solicitud/{solicitud_id}", headers=AUTH)
 if r.status_code == 200:
     docs = r.json()
     assert len(docs) == 2, f"Esperaba 2 documentos, obtuve {len(docs)}"
-    ok(f"GET /documentos/solicitud/{solicitud_id} → {len(docs)} documentos ✓")
+    ok(f"GET /documentos/solicitud/{solicitud_id} → {len(docs)} documentos")
 else:
     fail(" listar documentos post-2do", f"status={r.status_code}")
 
@@ -339,7 +339,7 @@ if r.status_code == 200:
     final = r.json()
     assert final["estado_actual"] == "Finalizado"
     assert final["fase_actual"] == len(fases_tipo)
-    ok(f"GET /solicitudes/{solicitud_id} → flujo finalizado en fase {len(fases_tipo)} ✓")
+    ok(f"GET /solicitudes/{solicitud_id} → flujo finalizado en fase {len(fases_tipo)}")
 else:
     fail("GET /solicitudes/{id} (final)", f"status={r.status_code}")
 
@@ -391,8 +391,8 @@ else:
 
 # ════════════════════════════════════════════════════════════════════
 print(f"\n{'='*50}")
-print(f"📋 RESUMEN: {PASS} pasaron / {FAIL} fallaron / {PASS+FAIL} total")
+print(f"RESUMEN: {PASS} pasaron / {FAIL} fallaron / {PASS+FAIL} total")
 print(f"{'='*50}")
 if FAIL > 0:
     raise SystemExit(1)
-print("🎉 ¡Todas las pruebas pasaron!")
+print("Todas las pruebas pasaron exitosamente.")

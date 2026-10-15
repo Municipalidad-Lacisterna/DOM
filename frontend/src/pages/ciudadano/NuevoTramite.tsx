@@ -149,14 +149,14 @@ export default function NuevoTramite() {
       {/* Confirmación de éxito */}
       {resultado && (
         <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
-          <p className="font-semibold">✅ Trámite ingresado correctamente</p>
+          <p className="font-semibold">Trámite ingresado correctamente</p>
           <p className="mt-1">
             Su número de ingreso es{" "}
             <span className="font-mono font-bold text-emerald-900">{resultado.numero_ingreso}</span>.
             Puede hacer seguimiento con este folio.
           </p>
           {docEstado === "ok" && (
-            <p className="mt-1">📎 PDFs adjuntos subidos correctamente.</p>
+            <p className="mt-1">Documentos adjuntos subidos correctamente.</p>
           )}
           <Link
             to={`/estado?folio=${resultado.numero_ingreso}`}
@@ -170,7 +170,7 @@ export default function NuevoTramite() {
       {/* Aviso: trámite creado pero el PDF no subió */}
       {resultado && docEstado === "err" && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          ⚠️ El trámite se creó (folio{" "}
+          El trámite se creó (folio{" "}
           <span className="font-mono font-bold">{resultado.numero_ingreso}</span>), pero algunos o todos los PDFs no
           se pudieron subir. Acuda a la DOM o contacte soporte.
         </div>
@@ -178,7 +178,7 @@ export default function NuevoTramite() {
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          ⚠️ {error}
+          {error}
         </div>
       )}
 
@@ -299,7 +299,7 @@ export default function NuevoTramite() {
                   return (
                     <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800">
                       <h4 className="font-semibold mb-1 flex items-center gap-1">
-                        🏛️ Formularios oficiales requeridos
+                        Formularios oficiales requeridos
                       </h4>
                       <p className="mb-2">
                         Para ingresar un trámite de <strong>{tipoSeleccionado.depto_responsable}</strong>, debe completar el Formulario Único Nacional correspondiente, además de adjuntar los planos.
@@ -339,7 +339,7 @@ export default function NuevoTramite() {
                   
                   <label className="flex-1 flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700">
                     <span className="flex items-center gap-2">
-                      📎 Seleccionar PDFs
+                      Seleccionar PDFs
                     </span>
                     <input
                       type="file"

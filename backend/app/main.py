@@ -13,9 +13,9 @@ from app.routers import auth, documentos, solicitudes, tipos
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Evento de startup/shutdown."""
-    print("🚀 DOM en Línea Municipal — API arrancando...")
+    print("DOM en Línea Municipal — API iniciada.")
     yield
-    print("🛑 API apagada.")
+    print("API detenida.")
 
 
 app = FastAPI(

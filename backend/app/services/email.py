@@ -26,9 +26,9 @@ async def enviar_correo_rechazo(email_destino: str, folio: str, motivo: str) -> 
 
     # Simulación de envío
     print("\n" + "=" * 60)
-    print(f"📧 ENVIANDO CORREO A: {email_destino}")
-    print(f"✉️  ASUNTO: {asunto}")
-    print(f"📝 CUERPO:\n{cuerpo}")
+    print(f"[ENVIO CORREO] Destinatario: {email_destino}")
+    print(f"Asunto: {asunto}")
+    print(f"Cuerpo:\n{cuerpo}")
     print("=" * 60 + "\n")
 
     logger.info(f"Correo de rechazo enviado a {email_destino} para el folio {folio}")
@@ -36,12 +36,12 @@ async def enviar_correo_rechazo(email_destino: str, folio: str, motivo: str) -> 
 
 async def enviar_correo_aprobacion(email_destino: str, folio: str) -> None:
     """Servicio simulado para enviar correo de aprobación exitosa."""
-    asunto = f"Resolución de Trámite {folio} - APROBADO EXITOSAMENTE"
+    asunto = f"Resolución de Trámite {folio} - APROBADO"
     cuerpo = (
-        f"Estimado/a vecino/a,\n\n"
-        f"Le informamos con alegría que su trámite con folio {folio} ha superado "
-        f"todas las etapas de revisión y ha sido APROBADO EXITOSAMENTE.\n\n"
-        f"Puede descargar su certificado/resolución ingresando al portal de seguimiento "
+        f"Estimado/a solicitante,\n\n"
+        f"Le informamos que su trámite con folio {folio} ha superado "
+        f"las etapas de revisión y ha sido aprobado.\n\n"
+        f"Puede descargar su certificado o resolución ingresando al portal de seguimiento "
         f"con su número de folio.\n\n"
         f"Atentamente,\n"
         f"Dirección de Obras Municipales\n"
@@ -49,9 +49,9 @@ async def enviar_correo_aprobacion(email_destino: str, folio: str) -> None:
     )
 
     print("\n" + "=" * 60)
-    print(f"📧 ENVIANDO CORREO A: {email_destino}")
-    print(f"✉️  ASUNTO: {asunto}")
-    print(f"📝 CUERPO:\n{cuerpo}")
+    print(f"[ENVIO CORREO] Destinatario: {email_destino}")
+    print(f"Asunto: {asunto}")
+    print(f"Cuerpo:\n{cuerpo}")
     print("=" * 60 + "\n")
 
     logger.info(f"Correo de aprobación enviado a {email_destino} para el folio {folio}")

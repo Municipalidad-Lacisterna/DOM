@@ -228,7 +228,7 @@ FASES_POR_TIPO = {
 
 
 def run():
-    print("🌱 Sembrando datos de demo...")
+    print("Sembrando datos de prueba...")
 
     with engine_sync.begin() as conn:
         # ── Tipos de trámite (ON CONFLICT DO NOTHING por nombre) ─────
@@ -241,7 +241,7 @@ def run():
                 ),
                 {"nombre": nombre, "depto": depto},
             )
-        print(f"  ✅ {len(TIPOS_TRAMITE)} tipos de trámite (idempotente)")
+        print(f"  - {len(TIPOS_TRAMITE)} tipos de trámite (idempotente)")
 
         # ── Funcionarios (upsert por rut: crea o actualiza) ──────────
         for rut, depto, rol, clave in FUNCIONARIOS:
@@ -256,7 +256,7 @@ def run():
                 ),
                 {"rut": rut, "depto": depto, "rol": rol, "clave": hash_password(clave)},
             )
-        print(f"  ✅ {len(FUNCIONARIOS)} funcionarios con clave_hash (upsert)")
+        print(f"  - {len(FUNCIONARIOS)} funcionarios con clave_hash (upsert)")
 
         # ── Fases por tipo de trámite (ON CONFLICT DO NOTHING por id_tipo+orden) ──
         total_fases = 0
@@ -282,7 +282,7 @@ def run():
                     },
                 )
                 total_fases += 1
-        print(f"  ✅ {total_fases} fases para {len(FASES_POR_TIPO)} tipos (idempotente)")
+        print(f"  - {total_fases} fases para {len(FASES_POR_TIPO)} tipos (idempotente)")
 
     # ── Mostrar resumen ─────────────────────────────────────────────
     with engine_sync.connect() as conn:
@@ -299,7 +299,7 @@ def run():
             )
         ).fetchall()
 
-    print("\n📋 TIPOS DE TRÁMITE EN BASE:")
+    print("\nTIPOS DE TRÁMITE EN BASE:")
     depto_actual = None
     for t in tipos:
         if t.depto_responsable != depto_actual:
@@ -307,11 +307,11 @@ def run():
             depto_actual = t.depto_responsable
         print(f"    [{t.id}] {t.nombre}")
 
-    print("\n👤 FUNCIONARIOS:")
+    print("\nFUNCIONARIOS:")
     for f in funcs:
         print(f"  [{f.id}] {f.rut} — {f.departamento} ({f.rol})")
 
-    print("\n🪜 FASES POR TIPO (resumen):")
+    print("\nFASES POR TIPO (resumen):")
     with engine_sync.connect() as conn:
         fases_resumen = conn.execute(
             text(
@@ -324,7 +324,7 @@ def run():
     for fr in fases_resumen:
         print(f"  {fr.nombre}: {fr.n_fases} fases")
 
-    print("\n✅ Seed completado.")
+    print("\nSeed completado exitosamente.")
 
 
 if __name__ == "__main__":
