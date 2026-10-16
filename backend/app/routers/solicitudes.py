@@ -761,4 +761,4 @@ async def derivar_solicitud(
         motivo=payload.motivo or "Asignación técnica de expediente",
     )
 
-    return await detalle_solicitud(solicitud.id, funcionario_auth, db)
+    return await obtener_solicitud(solicitud.id, funcionario_auth, db)
