@@ -65,6 +65,45 @@ export default function RevisarTramite() {
   const [nuevaNota, setNuevaNota] = useState("");
   const [enviandoNota, setEnviandoNota] = useState(false);
 
+  // ── Derivación por RUT ──────────────────────────────────────────
+  const [mostrarDerivar, setMostrarDerivar] = useState(false);
+  const [rutDestino, setRutDestino] = useState("");
+  const [motivoDerivacion, setMotivoDerivacion] = useState("");
+  const [funcionarios, setFuncionarios] = useState<Array<{ id: number; rut: string; departamento: string; rol: string }>>([]);
+
+  const cargarFuncionarios = () => {
+    api
+      .get<Array<{ id: number; rut: string; departamento: string; rol: string }>>("/auth/funcionarios")
+      .then(setFuncionarios)
+      .catch(() => setFuncionarios([]));
+  };
+
+  const ejecutarDerivacion = async () => {
+    if (!rutDestino || !solicitud) return;
+    setEnviando(true);
+    try {
+      const res = await api.post<BandejaItem>(`/solicitudes/${solicitud.id}/derivar`, {
+        rut_destino: rutDestino,
+        motivo: motivoDerivacion,
+      });
+      setSolicitud(res);
+      setAviso({
+        tipo: "ok",
+        texto: `Expediente derivado exitosamente a ${rutDestino}. Se envió notificación por correo.`,
+      });
+      setMostrarDerivar(false);
+      setRutDestino("");
+      setMotivoDerivacion("");
+    } catch (e) {
+      setAviso({
+        tipo: "err",
+        texto: e instanceof Error ? e.message : "Error al derivar el expediente",
+      });
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   useEffect(() => {
     if (!solicitudId) return;
     api
@@ -341,6 +380,72 @@ export default function RevisarTramite() {
 
             
             
+            {!["Finalizado", "Rechazado"].includes(solicitud.estado_actual) && (
+              <button
+                onClick={() => {
+                  if (!mostrarDerivar) cargarFuncionarios();
+                  setMostrarDerivar(!mostrarDerivar);
+                }}
+                disabled={enviando}
+                className="mb-3 w-full rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                {mostrarDerivar ? "Cancelar derivación" : "Delegar / Derivar trámite (RUT)"}
+              </button>
+            )}
+
+            {/* Panel de Derivación */}
+            {mostrarDerivar && (
+              <div className="mb-3 space-y-3 rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Funcionario / Revisor destinatario
+                  </label>
+                  <select
+                    value={rutDestino}
+                    onChange={(e) => setRutDestino(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="">-- Seleccionar de la lista institucional --</option>
+                    {funcionarios.map((f) => (
+                      <option key={f.id} value={f.rut}>
+                        {f.rut} — {f.departamento} ({f.rol})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">O ingrese el RUT directamente:</p>
+                  <input
+                    type="text"
+                    placeholder="Ej: 11111111-1"
+                    value={rutDestino}
+                    onChange={(e) => setRutDestino(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Instrucciones / Motivo de la derivación
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={motivoDerivacion}
+                    onChange={(e) => setMotivoDerivacion(e.target.value)}
+                    placeholder="Ej: Asignado para informe de terreno / cálculo de derechos..."
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={ejecutarDerivacion}
+                  disabled={enviando || !rutDestino.trim()}
+                  className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {enviando ? "Derivando…" : "Confirmar derivación y enviar correo"}
+                </button>
+              </div>
+            )}
+
             {!["Finalizado", "Rechazado"].includes(solicitud.estado_actual) && (
               <button
                 onClick={() => setMostrarObs("rechazar")}

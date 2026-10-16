@@ -78,6 +78,30 @@ async def me(funcionario: Funcionario = Depends(_funcionario_actual)):
     return FuncionarioOut.model_validate(funcionario)
 
 
+@router.get("/funcionarios", summary="Listar funcionarios para derivación")
+async def listar_funcionarios(
+    departamento: str | None = None,
+    funcionario_auth: Funcionario = Depends(_funcionario_actual),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(Funcionario).order_by(Funcionario.departamento, Funcionario.id)
+    if departamento:
+        stmt = stmt.where(Funcionario.departamento == departamento)
+    resultado = await db.execute(stmt)
+    funcs = resultado.scalars().all()
+    return [
+        {
+            "id": f.id,
+            "rut": f.rut,
+            "departamento": f.departamento,
+            "rol": f.rol,
+            "email": f.email or f"{f.rut}@lacisterna.cl",
+            "departamentos_admin": f.departamentos_admin or "",
+        }
+        for f in funcs
+    ]
+
+
 # Dependencia pública para proteger endpoints internos de otros routers
 # (bandeja, cambios de estado, documentos, etc.): exige funcionario con JWT.
 require_funcionario = _funcionario_actual

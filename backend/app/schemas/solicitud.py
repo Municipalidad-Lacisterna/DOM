@@ -37,6 +37,13 @@ class SolicitudIngreso(BaseModel):
     id_tipo: int = Field(..., gt=0, description="ID de tipos_tramite")
 
 
+class DerivacionIn(BaseModel):
+    """Payload de POST /api/solicitudes/{id}/derivar."""
+
+    rut_destino: str = Field(..., max_length=12)
+    motivo: str | None = Field(None, max_length=500)
+
+
 # ── Entrada: cambio de estado ───────────────────────────────────────
 class EstadoUpdate(BaseModel):
     """Payload de PUT /api/solicitudes/{id}/estado."""

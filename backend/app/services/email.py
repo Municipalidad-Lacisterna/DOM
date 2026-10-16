@@ -55,3 +55,39 @@ async def enviar_correo_aprobacion(email_destino: str, folio: str) -> None:
     print("=" * 60 + "\n")
 
     logger.info(f"Correo de aprobación enviado a {email_destino} para el folio {folio}")
+
+
+async def enviar_correo_derivacion(
+    email_destino: str,
+    nombre_funcionario: str,
+    folio: str,
+    tipo_tramite: str,
+    fase_nombre: str,
+    derivado_por: str,
+    motivo: str = "",
+) -> None:
+    """Envía notificación por correo cuando se asigna o deriva un trámite a un funcionario."""
+    asunto = f"Asignación de Expediente {folio} - {tipo_tramite}"
+    cuerpo = (
+        f"Estimado/a {nombre_funcionario},\n\n"
+        f"Se le ha derivado/asignado el expediente con folio {folio} ({tipo_tramite}).\n\n"
+        f"Etapa actual: {fase_nombre}\n"
+        f"Derivado por: {derivado_por}\n"
+    )
+    if motivo:
+        cuerpo += f"Instrucciones/Motivo: {motivo}\n\n"
+    else:
+        cuerpo += "\n"
+    cuerpo += (
+        "Por favor ingrese a la Intranet de Funcionarios para revisar los antecedentes y continuar el trámite.\n\n"
+        "Dirección de Obras Municipales\n"
+        "Ilustre Municipalidad de La Cisterna"
+    )
+
+    print("\n" + "=" * 60)
+    print(f"[ENVIO CORREO A FUNCIONARIO] Destinatario: {email_destino}")
+    print(f"Asunto: {asunto}")
+    print(f"Cuerpo:\n{cuerpo}")
+    print("=" * 60 + "\n")
+
+    logger.info(f"Correo de asignación enviado a {email_destino} para el folio {folio}")

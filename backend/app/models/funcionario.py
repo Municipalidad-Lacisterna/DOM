@@ -11,6 +11,8 @@ class Funcionario(Base):
     departamento = Column(String(100), nullable=False)
     rol = Column(String(50), nullable=False)  # ej: "admin", "ejecutor", "visor"
     clave_hash = Column(String(255), nullable=False)  # PBKDF2 + salt (ver app.security)
+    email = Column(String(255), nullable=True, default="")
+    departamentos_admin = Column(String(255), nullable=True, default="")
 
     # ── Relaciones ───────────────────────────────────────────────────
     logs = relationship("LogEstadoTramite", back_populates="funcionario")

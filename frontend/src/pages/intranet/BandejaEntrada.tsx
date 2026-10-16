@@ -12,6 +12,7 @@ export default function BandejaEntrada() {
   const [items, setItems] = useState<BandejaItem[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tabActual, setTabActual] = useState<string>("pendientes");
   const [filtroEstado, setFiltroEstado] = useState<string>("");
   const [intento, setIntento] = useState(0); // para reintentar
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function BandejaEntrada() {
     setError(null);
 
     const params = new URLSearchParams();
+    if (tabActual) params.set("tab", tabActual);
     if (filtroEstado) params.set("estado", filtroEstado);
 
     const query = params.toString();
@@ -29,11 +31,19 @@ export default function BandejaEntrada() {
       .then(setItems)
       .catch((e: Error) => setError(e.message))
       .finally(() => setCargando(false));
-  }, [filtroEstado]);
+  }, [tabActual, filtroEstado]);
 
   useEffect(() => {
     cargar();
   }, [cargar, intento]);
+
+  const TABS = [
+    { id: "pendientes", label: "Nuevos pendientes" },
+    { id: "en_proceso", label: "En proceso" },
+    { id: "aprobados", label: "Aprobados / Finalizados" },
+    { id: "rechazados", label: "Rechazados" },
+    { id: "", label: "Ver todos" },
+  ];
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -41,8 +51,28 @@ export default function BandejaEntrada() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Bandeja de Entrada</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Trámites ingresados por ciudadanos, listos para ser revisados.
+          Gestión y seguimiento de expedientes del departamento municipal.
         </p>
+      </div>
+
+      {/* Pestañas de estado */}
+      <div className="mb-6 flex border-b border-slate-200">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => {
+              setTabActual(tab.id);
+              setFiltroEstado("");
+            }}
+            className={`border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+              tabActual === tab.id
+                ? "border-sky-600 text-sky-600"
+                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Filtros */}

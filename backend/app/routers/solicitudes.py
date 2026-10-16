@@ -24,6 +24,7 @@ from app.models.mensaje_interno import MensajeInterno
 from app.routers.auth import require_funcionario
 from app.schemas.mensaje import MensajeInternoCreate, MensajeInternoOut
 from app.schemas.solicitud import (
+    DerivacionIn,
     EstadoUpdate,
     FlujoUpdate,
     SolicitudBandejaOut,
@@ -31,7 +32,7 @@ from app.schemas.solicitud import (
     SolicitudOut,
     SolicitudUpdate,
 )
-from app.services.email import enviar_correo_rechazo
+from app.services.email import enviar_correo_derivacion, enviar_correo_rechazo
 from app.services.flujo import (
     AccionFlujo,
     EstadoTramite,
@@ -331,13 +332,14 @@ async def ejecutar_accion_flujo(
 @router.get(
     "/bandeja",
     response_model=list[SolicitudBandejaOut],
-    summary="Bandeja de trámites del funcionario (filtrable)",
+    summary="Bandeja de trámites del funcionario (filtrable y aislada por depto)",
 )
 async def bandeja(
     departamento: str | None = Query(
         None, description="Dept. responsable del tipo de trámite"
     ),
     estado: str | None = Query(None, description="Estado actual del trámite"),
+    tab: str | None = Query(None, description="Pestaña: pendientes, en_proceso, aprobados, rechazados"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     funcionario_auth: Funcionario = Depends(require_funcionario),
@@ -345,7 +347,8 @@ async def bandeja(
 ):
     """
     Devuelve las solicitudes con información de tipo de trámite,
-    solicitante y predio.  Filtrable por departamento y/o estado.
+    solicitante y predio. Filtrable por departamento, estado y pestaña.
+    Aislamiento por departamento: funcionarios solo ven lo de su unidad o de las que administran.
     """
 
     stmt = (
@@ -362,10 +365,27 @@ async def bandeja(
         .limit(limit)
     )
 
+    # ── Aislamiento departamental si no es admin general ─────────────
+    if funcionario_auth.rol != "admin":
+        deptos_permitidos = [funcionario_auth.departamento]
+        if funcionario_auth.departamentos_admin:
+            extras = [d.strip() for d in funcionario_auth.departamentos_admin.split(",") if d.strip()]
+            deptos_permitidos.extend(extras)
+        stmt = stmt.where(TipoTramite.depto_responsable.in_(deptos_permitidos))
+
     if departamento:
         stmt = stmt.where(TipoTramite.depto_responsable == departamento)
     if estado:
         stmt = stmt.where(Solicitud.estado_actual == estado)
+
+    if tab == "pendientes":
+        stmt = stmt.where(Solicitud.estado_actual == "Ingresado")
+    elif tab == "en_proceso":
+        stmt = stmt.where(Solicitud.estado_actual.in_(["En Revisión", "En Corrección"]))
+    elif tab == "aprobados":
+        stmt = stmt.where(Solicitud.estado_actual.in_(["Aprobado", "Finalizado"]))
+    elif tab == "rechazados":
+        stmt = stmt.where(Solicitud.estado_actual == "Rechazado")
 
     resultado = await db.execute(stmt)
     filas = resultado.all()
@@ -676,3 +696,69 @@ async def listar_mensajes(
         )
         for msg, func in filas
     ]
+
+
+@router.post(
+    "/{solicitud_id}/derivar",
+    response_model=SolicitudBandejaOut,
+    summary="Delegar o derivar un trámite a un funcionario por RUT",
+)
+async def derivar_solicitud(
+    solicitud_id: int,
+    payload: DerivacionIn,
+    funcionario_auth: Funcionario = Depends(require_funcionario),
+    db: AsyncSession = Depends(get_db),
+):
+    solicitud = await db.get(Solicitud, solicitud_id)
+    if not solicitud:
+        raise HTTPException(
+            status_code=404, detail=f"Solicitud {solicitud_id} no encontrada"
+        )
+
+    rut_norm = payload.rut_destino.replace(".", "").replace(" ", "").upper()
+    stmt_func = select(Funcionario).where(Funcionario.rut == rut_norm)
+    res_func = await db.execute(stmt_func)
+    func_destino = res_func.scalar_one_or_none()
+
+    if not func_destino:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Funcionario con RUT {payload.rut_destino} no encontrado",
+        )
+
+    # Asignar funcionario
+    solicitud.id_funcionario_asignado = func_destino.id
+
+    # Si estaba recién ingresado, al delegarse pasa a En Revisión
+    if solicitud.estado_actual == "Ingresado":
+        solicitud.estado_actual = "En Revisión"
+
+    # Registrar en logs
+    motivo_txt = f" — Motivo: {payload.motivo}" if payload.motivo else ""
+    log = LogEstadoTramite(
+        id_solicitud=solicitud.id,
+        estado_anterior=solicitud.estado_actual,
+        estado_nuevo=solicitud.estado_actual,
+        id_funcionario=funcionario_auth.id,
+        observaciones=f"Derivado/Asignado a {func_destino.rut} ({func_destino.departamento}){motivo_txt}",
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(solicitud)
+
+    # Cargar datos para notificación por correo
+    tipo = await db.get(TipoTramite, solicitud.id_tipo)
+    nombre_tipo = tipo.nombre if tipo else "Trámite DOM"
+    email_dest = func_destino.email or f"{func_destino.rut}@lacisterna.cl"
+
+    await enviar_correo_derivacion(
+        email_destino=email_dest,
+        nombre_funcionario=func_destino.rut,
+        folio=solicitud.numero_ingreso,
+        tipo_tramite=nombre_tipo,
+        fase_nombre=f"Fase {solicitud.fase_actual}",
+        derivado_por=f"{funcionario_auth.rut} ({funcionario_auth.departamento})",
+        motivo=payload.motivo or "Asignación técnica de expediente",
+    )
+
+    return await detalle_solicitud(solicitud.id, funcionario_auth, db)

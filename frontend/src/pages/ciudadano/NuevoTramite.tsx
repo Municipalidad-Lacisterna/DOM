@@ -21,6 +21,10 @@ interface Formulario {
   rol_sii: string;
   direccion: string;
   id_tipo: string;
+  uso_suelo: string;
+  superficie: string;
+  descripcion_proyecto: string;
+  profesional: string;
 }
 
 const INICIAL: Formulario = {
@@ -29,11 +33,16 @@ const INICIAL: Formulario = {
   email: "",
   rol_sii: "",
   direccion: "",
-  id_tipo: "1",
+  id_tipo: "",
+  uso_suelo: "Residencial / Habitacional",
+  superficie: "",
+  descripcion_proyecto: "",
+  profesional: "",
 };
 
 export default function NuevoTramite() {
   const [form, setForm] = useState<Formulario>(INICIAL);
+  const [deptoSeleccionado, setDeptoSeleccionado] = useState("");
   const [archivos, setArchivos] = useState<{file: File, tipo: string}[]>([]);
   const [tipoAdjuntoActual, setTipoAdjuntoActual] = useState("Planos");
   const [enviando, setEnviando] = useState(false);
@@ -265,59 +274,127 @@ export default function NuevoTramite() {
         {/* ── Trámite + adjunto ─────────────────────────────────────── */}
         <fieldset>
           <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-            3 · Trámite y adjuntos
+            3 · Departamento, trámite y formulario en línea
           </legend>
           <div className="grid gap-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Tipo de trámite <span className="text-red-500">*</span>
+                1. Seleccionar Departamento Destino <span className="text-red-500">*</span>
               </label>
               <select
                 className={inputClase}
-                value={form.id_tipo}
-                onChange={setCampo("id_tipo")}
+                value={deptoSeleccionado}
+                onChange={(e) => {
+                  const depto = e.target.value;
+                  setDeptoSeleccionado(depto);
+                  const filtrados = tipos.filter(t => t.depto_responsable === depto);
+                  if (filtrados.length > 0) {
+                    setForm(f => ({ ...f, id_tipo: String(filtrados[0].id) }));
+                  } else {
+                    setForm(f => ({ ...f, id_tipo: "" }));
+                  }
+                }}
                 required
-                disabled={cargandoTipos || tipos.length === 0}
               >
-                {cargandoTipos ? (
-                  <option value="">Cargando catálogo…</option>
-                ) : tipos.length === 0 ? (
-                  <option value="">Sin tipos disponibles</option>
-                ) : (
-                  tipos.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.nombre} — {t.depto_responsable}
-                    </option>
-                  ))
-                )}
+                <option value="">-- Seleccione el departamento municipal --</option>
+                {Array.from(new Set(tipos.map(t => t.depto_responsable))).map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
               </select>
-
-              {/* Ayuda MINVU para Edificación y Urbanismo */}
-              {(() => {
-                const tipoSeleccionado = tipos.find(t => String(t.id) === form.id_tipo);
-                if (tipoSeleccionado && (tipoSeleccionado.depto_responsable === "Edificación" || tipoSeleccionado.depto_responsable === "Urbanismo e Inspección")) {
-                  return (
-                    <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800">
-                      <h4 className="font-semibold mb-1 flex items-center gap-1">
-                        Formularios oficiales requeridos
-                      </h4>
-                      <p className="mb-2">
-                        Para ingresar un trámite de <strong>{tipoSeleccionado.depto_responsable}</strong>, debe completar el Formulario Único Nacional correspondiente, además de adjuntar los planos.
-                      </p>
-                      <a 
-                        href="https://www.minvu.gob.cl/elementos-tecnicos/formularios/formularios-de-permisos-de-edificacion/" 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-900 underline"
-                      >
-                        Descargar formularios en el portal del MINVU →
-                      </a>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
             </div>
+
+            {deptoSeleccionado && (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  2. Tipo de trámite ({deptoSeleccionado}) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className={inputClase}
+                  value={form.id_tipo}
+                  onChange={setCampo("id_tipo")}
+                  required
+                >
+                  <option value="">-- Seleccione el tipo de trámite --</option>
+                  {tipos
+                    .filter(t => t.depto_responsable === deptoSeleccionado)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nombre}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            {/* Formulario dinámico para rellenar en la misma página */}
+            {deptoSeleccionado && form.id_tipo && (
+              <div className="mt-2 rounded-xl border border-sky-200 bg-sky-50/60 p-5 space-y-4">
+                <div className="border-b border-sky-200 pb-2">
+                  <h4 className="text-sm font-bold text-sky-950">
+                    Formulario oficial: {tipos.find(t => String(t.id) === form.id_tipo)?.nombre}
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Complete los campos requeridos para este expediente directamente en la plataforma.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700">
+                      Uso de suelo / Destino principal
+                    </label>
+                    <select
+                      className={inputClase}
+                      value={form.uso_suelo}
+                      onChange={setCampo("uso_suelo")}
+                    >
+                      <option value="Residencial / Habitacional">Residencial / Habitacional</option>
+                      <option value="Comercial / Servicios">Comercial / Servicios</option>
+                      <option value="Equipamiento Comunitario">Equipamiento Comunitario</option>
+                      <option value="Industrial / Bodegaje">Industrial / Bodegaje</option>
+                      <option value="Espacio Público / Vial">Espacio Público / Vial</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700">
+                      Superficie a edificar o intervenir (m²)
+                    </label>
+                    <input
+                      className={inputClase}
+                      placeholder="Ej: 140.5"
+                      value={form.superficie}
+                      onChange={setCampo("superficie")}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700">
+                    Profesional competente responsable (Arquitecto / Ingeniero)
+                  </label>
+                  <input
+                    className={inputClase}
+                    placeholder="Nombre completo y RUT del profesional patrocinante"
+                    value={form.profesional}
+                    onChange={setCampo("profesional")}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-slate-700">
+                    Memoria descriptiva y justificación técnica del proyecto
+                  </label>
+                  <textarea
+                    rows={3}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    placeholder="Detalle el alcance de la obra, modificaciones estructurales o antecedentes relevantes..."
+                    value={form.descripcion_proyecto}
+                    onChange={(e) => setForm(f => ({ ...f, descripcion_proyecto: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
 
 
             <div>
